@@ -15,12 +15,21 @@ import {
   useReactFlow
 } from '@xyflow/react';
 import { Code2, ExternalLink, Eye, GitBranch, Layers3 } from 'lucide-react';
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
+import markup from 'react-syntax-highlighter/dist/esm/languages/prism/markup';
+import javascript from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
+import css from 'react-syntax-highlighter/dist/esm/languages/prism/css';
+import oneDark from 'react-syntax-highlighter/dist/esm/styles/prism/one-dark';
 import { NodeMap, PageNode } from '../types';
 import {
   getChildComponentId,
   getComponentGraphId,
   getGenerationLabels
 } from '../utils/sessionGraph';
+
+SyntaxHighlighter.registerLanguage('markup', markup);
+SyntaxHighlighter.registerLanguage('javascript', javascript);
+SyntaxHighlighter.registerLanguage('css', css);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -527,9 +536,30 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
               />
             </div>
           ) : (
-            <pre className="h-full overflow-auto rounded-xl border border-[#2a2a35] bg-[#121217] p-5 font-mono text-xs leading-relaxed text-[#cbd5e1]">
-              <code>{detail.htmlContent}</code>
-            </pre>
+            <div className="h-full overflow-auto rounded-xl border border-[#2a2a35] bg-[#121217] p-5 font-mono text-xs leading-relaxed text-[#cbd5e1]">
+              <SyntaxHighlighter
+                language="html"
+                style={oneDark}
+                wrapLongLines
+                customStyle={{
+                  margin: 0,
+                  padding: 0,
+                  background: 'transparent',
+                  color: 'inherit',
+                  fontFamily: 'inherit',
+                  fontSize: 'inherit',
+                  lineHeight: 'inherit',
+                }}
+                codeTagProps={{
+                  style: {
+                    fontFamily: 'inherit',
+                    overflowWrap: 'anywhere',
+                  },
+                }}
+              >
+                {detail.htmlContent}
+              </SyntaxHighlighter>
+            </div>
           )}
         </div>
       </section>

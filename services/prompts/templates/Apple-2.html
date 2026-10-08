@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="An interactive first-principles lesson on the claim that compression is intelligence.">
+    <title>Compression is intelligence: first principles</title>
+    
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('compression-theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        apple: {
+                            bg: 'var(--apple-bg)',
+                            surface: 'var(--apple-surface)',
+                            surfaceElevated: 'var(--apple-surface-elevated)',
+                            text: 'var(--apple-text)',
+                            textMuted: 'var(--apple-text-muted)',
+                            accent: 'var(--apple-accent)',
+                            accentHover: 'var(--apple-accent-hover)',
+                            border: 'var(--apple-border)',
+                            glass: 'var(--apple-glass)',
+                            red: 'var(--apple-red)',
+                            orange: 'var(--apple-orange)',
+                            chart1: 'var(--apple-chart-1)',
+                            chart2: 'var(--apple-chart-2)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: [
+                            '-apple-system', 
+                            'BlinkMacSystemFont', 
+                            '"SF Pro Text"', 
+                            '"Helvetica Neue"', 
+                            'sans-serif'
+                        ],
+                        mono: [
+                            '"SF Mono"', 
+                            'ui-monospace', 
+                            'Menlo', 
+                            'Monaco', 
+                            'monospace'
+                        ],
+                        display: [
+                            '-apple-system', 
+                            'BlinkMacSystemFont', 
+                            '"SF Pro Display"', 
+                            '"Helvetica Neue"', 
+                            'sans-serif'
+                        ]
+                    },
+                    boxShadow: {
+                        'apple-sm': '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)',
+                        'apple-md': '0 8px 24px rgba(0, 0, 0, 0.05), 0 4px 8px rgba(0, 0, 0, 0.03)',
+                        'apple-glass': '0 8px 32px rgba(0, 0, 0, 0.08)',
+                    }
+                }
+            }
+        };
+    </script>
+    
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.3.1",
+            "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+            "react/jsx-dev-runtime": "https://esm.sh/react@18.3.1/jsx-dev-runtime",
+            "react-dom": "https://esm.sh/react-dom@18.3.1",
+            "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0?external=react,react-dom",
+            "recharts": "https://esm.sh/recharts@2.12.0?external=react,react-dom",
+            "zustand": "https://esm.sh/zustand@4.5.0?external=react",
+            "zod": "https://esm.sh/zod@3.22.4",
+            "clsx": "https://esm.sh/clsx@2.1.0",
+            "tailwind-merge": "https://esm.sh/tailwind-merge@2.2.1",
+            "lodash": "https://esm.sh/lodash@4.17.21"
+        }
+    }
+    </script>
+    
+    <style>
+        :root {
+            --apple-bg: #ffffff;
+            --apple-surface: #f5f5f7;
+            --apple-surface-elevated: #ffffff;
+            --apple-text: #1d1d1f;
+            --apple-text-muted: #86868b;
+            --apple-accent: #0066cc; /* Slightly deeper blue for readability */
+            --apple-accent-hover: #0055b3;
+            --apple-border: rgba(60, 60, 67, 0.12);
+            --apple-glass: rgba(255, 255, 255, 0.85);
+            --apple-red: #ff3b30;
+            --apple-orange: #f56a00;
+            --apple-chart-1: #34c759;
+            --apple-chart-2: #5ac8fa;
+        }
+
+        .dark {
+            --apple-bg: #000000;
+            --apple-surface: #1c1c1e;
+            --apple-surface-elevated: #2c2c2e;
+            --apple-text: #f5f5f7;
+            --apple-text-muted: #98989d;
+            --apple-accent: #2997ff;
+            --apple-accent-hover: #5ac8fa;
+            --apple-border: rgba(84, 84, 88, 0.45);
+            --apple-glass: rgba(28, 28, 30, 0.85);
+            --apple-red: #ff453a;
+            --apple-orange: #ff9f0a;
+            --apple-chart-1: #32d74b;
+            --apple-chart-2: #64d2ff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--apple-bg);
+            color: var(--apple-text);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            transition: background-color 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.4s ease;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* Apple-style Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-clip: padding-box;
+            border: 3px solid transparent;
+            background-color: var(--apple-text-muted);
+            border-radius: 9999px;
+            opacity: 0.5;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            border-width: 2px;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Apple-style Range Slider */
+        input[type=range].apple-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            outline: none;
+            margin: 10px 0;
+        }
+        input[type=range].apple-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: var(--apple-border);
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+        input[type=range].apple-slider::-webkit-slider-thumb {
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0,0,0,0.2) inset;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -9px; /* (trackHeight/2) - (thumbHeight/2) */
+            transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+            border: 0.5px solid rgba(0,0,0,0.04);
+        }
+        input[type=range].apple-slider:active::-webkit-slider-thumb {
+            transform: scale(1.1);
+        }
+        .dark input[type=range].apple-slider::-webkit-slider-thumb {
+            background: #d1d1d6;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255,255,255,0.2) inset;
+        }
+
+        /* Typography */
+        .apple-prose p { 
+            margin-bottom: 1.5em; 
+            line-height: 1.65; 
+            font-size: 1.05rem;
+            letter-spacing: -0.01em;
+        }
+        h1, h2, h3, h4, .font-display { 
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; 
+            letter-spacing: -0.025em; 
+        }
+
+        /* Animations */
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter {
+            animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        
+        /* Token styling */
+        .token-cell {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            background: var(--apple-surface-elevated);
+            box-shadow: var(--apple-sm);
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .dark .token-cell {
+            background: var(--apple-surface);
+        }
+
+        /* Glassmorphism utility */
+        .apple-glass-panel {
+            background: var(--apple-glass);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { create } from 'zustand';
+        import { z } from 'zod';
+        import { clsx } from 'clsx';
+        import { twMerge } from 'tailwind-merge';
+        import _ from 'lodash';
+        import * as Lucide from 'lucide-react';
+        import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid, Legend, Cell } from 'recharts';
+
+        const cn = (...inputs) => twMerge(clsx(inputs));
+
+        const ARTICLE = Object.freeze([
+            {
+                id: 'sec-thesis',
+                title: '1. What the claim actually says',
+                blocks: [
+                    { type: 'p', text: '“Compression is intelligence” is useful only if we state the claim precisely. The strong idea is not that every file compressor is intelligent. The idea is that learning a compact description of data requires discovering regularities, and those regularities are exactly what a system can use to predict, generalize, and form abstractions.' },
+                    { type: 'p', text: 'Suppose we observe a finite sequence x. A learner can always store x verbatim. That solution explains nothing. A better learner finds a shorter program or model M plus a smaller remainder r such that M and r reconstruct x. The compression comes from moving repeated structure out of the data and into the model.' },
+                    { type: 'equation', label: 'The basic accounting identity', text: 'description length = bits(model) + bits(data | model)' },
+                    { type: 'p', text: 'The phrase becomes interesting when “shorter description” is tied to out-of-sample prediction. A compact model earns its compression by assigning high probability to what repeatedly occurs and low probability to what does not. If the same model also predicts unseen samples well, compression has exposed real structure rather than merely memorized the training set.' }
+                ]
+            },
+            {
+                id: 'sec-regularity',
+                title: '2. Regularity is the source of compressibility',
+                blocks: [
+                    { type: 'p', text: 'Compression can only remove redundancy. If every symbol were independent and uniformly random, there would be no stable pattern to exploit. A shorter description becomes possible when observations are biased, repeated, correlated, generated by a small rule, or constrained by context.' },
+                    { type: 'p', text: 'This gives us the first technical bridge to learning. A learning algorithm receives examples and searches for structure that lets it predict parts of those examples from other parts. A compressor receives symbols and searches for structure that lets it encode some symbols using fewer bits given previous symbols or a learned model. The optimization target is different in form, but the useful information is the same regularity.' },
+                    { type: 'callout', title: 'Important boundary', text: 'Compressibility is evidence of regularity, not automatically evidence of understanding. A compressor can exploit local statistics without representing causes, goals, or interventions. The thesis becomes stronger as the compression model must transfer across contexts and support prediction under change.' }
+                ]
+            },
+            {
+                id: 'sec-entropy',
+                title: '3. Entropy tells us the irreducible average cost',
+                blocks: [
+                    { type: 'p', text: 'Shannon entropy answers a specific question. If symbols are drawn from a known probability distribution p, what is the smallest average number of bits needed per symbol by an optimal lossless code? For a discrete source, the lower bound is the expected surprise.' },
+                    { type: 'equation', label: 'Entropy', text: 'H(X) = - Σₓ p(x) log₂ p(x)' },
+                    { type: 'p', text: 'The term -log₂ p(x) is the ideal code length for outcome x. Common outcomes receive short descriptions because they are easy to anticipate. Rare outcomes receive long descriptions because they carry more surprise. Entropy is the probability-weighted average of those lengths.' },
+                    { type: 'p', text: 'For a fair binary source, p(0)=p(1)=0.5 and H=1 bit per symbol. If p(0)=0.99, the entropy falls to about 0.081 bits per symbol. The source is compressible because most observations are predictable from one number: the strong bias toward zero.' }
+                ]
+            },
+            {
+                id: 'sec-prob-code',
+                title: '4. Probability models and codes are two views of one object',
+                blocks: [
+                    { type: 'p', text: 'A probabilistic predictor can be turned into a code. If a model assigns probability q(x) to an outcome, an ideal arithmetic code spends about -log₂ q(x) bits on that outcome. This is not a metaphor. Modern entropy coders operationalize this connection closely enough that negative log-likelihood is literally an estimate of compressed length.' },
+                    { type: 'equation', label: 'Prediction becomes code length', text: 'L(x) = -log₂ q(x)' },
+                    { type: 'p', text: 'Now consider a sequence x₁,…,xₙ. A model predicts each next symbol from the previous context. The total ideal description length is the sum of the next-symbol surprises. Better prediction means larger probability on the symbols that actually arrive, which means fewer bits.' },
+                    { type: 'equation', label: 'Sequential coding', text: 'L(x₁:n) = - Σₜ log₂ q(xₜ | x₁:t-1)' },
+                    { type: 'p', text: 'This identity is why language modeling, density estimation, and compression are mathematically close. Training a model by minimizing cross-entropy is training it to reduce the expected code length of the data under its predictive distribution.' }
+                ]
+            },
+            {
+                id: 'sec-model-residual',
+                title: '5. A model compresses by separating rule from residual',
+                blocks: [
+                    { type: 'p', text: 'A useful decomposition is model plus residual. The model records what repeats across observations. The residual records what the model still fails to predict. If the model captures more genuine structure, residuals become cheaper. If the model is too complicated, its own description becomes expensive.' },
+                    { type: 'p', text: 'For a sequence such as ABABABABABAB, a short model can say “alternate A and B for six cycles.” The residual is nearly empty. For a sequence produced by fair coin flips, no comparably short rule can specify the exact realization without storing almost all of it.' },
+                    { type: 'callout', title: 'Toy example versus real learning', text: 'A toy compressor can expose obvious repetition with run-length or dictionary coding. Real learning systems face high-dimensional data where useful regularities are distributed, approximate, hierarchical, and context-dependent. The same accounting principle remains: structure is stored in parameters or programs, while exceptions remain in the residual.' }
+                ]
+            },
+            {
+                id: 'sec-mdl',
+                title: '6. Minimum description length turns the idea into model selection',
+                blocks: [
+                    { type: 'p', text: 'Minimum description length, or MDL, asks us to choose the model that minimizes the number of bits required to describe both the model and the data given that model. It directly penalizes two bad extremes: a model that is too simple leaves a large residual, while a model that memorizes everything has an enormous model description.' },
+                    { type: 'equation', label: 'Two-part MDL objective', text: 'M* = argmin_M [ L(M) + L(D | M) ]' },
+                    { type: 'p', text: 'The crucial step is that model complexity must be paid for. If we score only training likelihood, a sufficiently flexible model can encode accidental details. Once the parameters, structure, or effective degrees of freedom have a cost, the system must decide which regularities are worth keeping.' },
+                    { type: 'p', text: 'This is compression as inductive bias. The learner prefers hypotheses that explain many observations with a comparatively small amount of reusable structure.' }
+                ]
+            },
+            {
+                id: 'sec-kolmogorov',
+                title: '7. Kolmogorov complexity is the clean ideal and the hard limit',
+                blocks: [
+                    { type: 'p', text: 'Kolmogorov complexity K(x) is the length of the shortest program, on a fixed universal computer, that outputs x and halts. It captures the purest version of “understanding as compression”: the best explanation of an object is the shortest executable description that generates it.' },
+                    { type: 'equation', label: 'Algorithmic complexity', text: 'K_U(x) = min{|p| : U(p) = x}' },
+                    { type: 'p', text: 'Two facts matter. First, K(x) depends on the reference machine only up to an additive constant, so long descriptions share a robust notion of relative simplicity. Second, K(x) is not computable in general. There is no algorithm that can always certify the shortest possible program for arbitrary x.' },
+                    { type: 'p', text: 'That non-computability matters for the intelligence thesis. An actual learner cannot search all programs and prove global optimality. Practical intelligence uses restricted model classes, finite compute, approximate optimization, priors, and learned search procedures.' }
+                ]
+            },
+            {
+                id: 'sec-statistic',
+                title: '8. Good compression keeps the sufficient structure',
+                blocks: [
+                    { type: 'p', text: 'A compressed representation is useful for intelligence when it preserves the information needed for future tasks while discarding irrelevant detail. In statistics, a sufficient statistic preserves all information in the sample that matters for estimating a parameter under a specified model.' },
+                    { type: 'p', text: 'The important phrase is “under a specified model.” Sufficiency is task- and assumption-dependent. A representation that is sufficient for predicting the next token may not be sufficient for planning an intervention, explaining a causal mechanism, or recognizing a rare safety constraint.' },
+                    { type: 'callout', title: 'What intelligence needs from compression', text: 'The representation must be compact enough to generalize, but not so compressed that it deletes variables needed for the decisions the system will later face.' }
+                ]
+            },
+            {
+                id: 'sec-rate-distortion',
+                title: '9. Intelligence often needs lossy compression, not perfect reconstruction',
+                blocks: [
+                    { type: 'p', text: 'Lossless compression must preserve every bit of the original input. Intelligence usually does not need that. A useful internal representation can discard detail as long as the discarded information does not matter for the task. This is the setting of rate-distortion theory.' },
+                    { type: 'equation', label: 'Rate-distortion tradeoff', text: 'minimize  R + λD' },
+                    { type: 'p', text: 'R is the number of bits used by the representation. D is a distortion measure that says how much relevant information was lost. The multiplier λ determines how much distortion we are willing to tolerate to save bits. Change the distortion measure and the preferred representation changes.' },
+                    { type: 'p', text: 'This is a deeper version of the thesis. Intelligence is not about preserving the world pixel by pixel. It is about preserving what is predictive or decision-relevant at the right level of detail.' }
+                ]
+            },
+            {
+                id: 'sec-abstraction',
+                title: '10. Abstraction is compression with invariance',
+                blocks: [
+                    { type: 'p', text: 'An abstraction groups many surface forms under one reusable representation. If several observations support the same prediction, a learner can save capacity by representing their shared structure once instead of storing each case independently.' },
+                    { type: 'p', text: 'In machine learning, this appears as latent variables, embeddings, features, clusters, state abstractions, and learned world models. A good representation makes relevant distinctions easy and irrelevant variation cheap. That is a form of compression because many raw configurations map to fewer internal states.' },
+                    { type: 'p', text: 'But abstraction only helps when the invariance is correct. If two situations look similar but require different actions, collapsing them destroys information. Compression quality must therefore be judged against future prediction or control, not only against how small the representation becomes.' }
+                ]
+            },
+            {
+                id: 'sec-compression-prediction',
+                title: '11. A compressor can make a prediction by asking which continuation is cheapest',
+                blocks: [
+                    { type: 'p', text: 'The probability-code equivalence gives a concrete prediction procedure. Suppose we have observed a context c and want to predict the next symbol a. For each candidate a, estimate the extra code length required to encode c followed by a. The candidate with the smallest incremental code length is the one the compressor considers most expected.' },
+                    { type: 'equation', label: 'Compression-based next-symbol score', text: 'score(a) = L(ca) - L(c)' },
+                    { type: 'p', text: 'If the code is induced by a probabilistic model, the score is approximately -log₂ p(a|c). Lower additional length means higher conditional probability. This makes prediction and compression operationally interchangeable for sequence models.' },
+                    { type: 'p', text: 'The visualizer uses a finite-order Markov code to expose this mechanism. It is intentionally a toy model. A modern neural language model replaces the small context table with a learned function over long contexts, but its cross-entropy objective still measures expected code length.' }
+                ]
+            },
+            {
+                id: 'sec-bayes',
+                title: '12. Bayesian learning also pays for complexity',
+                blocks: [
+                    { type: 'p', text: 'Bayesian inference and compression meet through the same accounting. A prior assigns probability to models before seeing data. A likelihood assigns probability to the data under each model. Taking negative logarithms turns multiplication into addition and probabilities into code lengths.' },
+                    { type: 'equation', label: 'Bayes in code-length form', text: '-log p(M|D) = -log p(D|M) - log p(M) + constant' },
+                    { type: 'p', text: 'The term -log p(M) acts like a model description length. A simple or strongly expected model gets a shorter prior code. The term -log p(D|M) is the data code length under that model. Maximum a posteriori estimation therefore balances fit and complexity in a way closely related to MDL.' },
+                    { type: 'p', text: 'The equivalence is not exact for every coding convention or every Bayesian procedure, but the structural connection is strong: good hypotheses must explain the observations without requiring an implausibly expensive hypothesis description.' }
+                ]
+            },
+            {
+                id: 'sec-overfit',
+                title: '13. Overfitting is compression that fails to transfer',
+                blocks: [
+                    { type: 'p', text: 'A model can compress its training sample while learning accidental details that do not recur. This is why training compression alone is not enough. We need either an explicit cost for model complexity, evaluation on held-out data, a universal coding scheme, or some other mechanism that prevents the learner from hiding the dataset inside the model.' },
+                    { type: 'p', text: 'The MDL visualizer fits Markov models of increasing order. Higher orders can drive training code length downward because they condition on more specific contexts. Eventually the context table becomes large and sparse. The model-cost term rises, and held-out code length can worsen because those detailed contexts do not have enough evidence.' },
+                    { type: 'callout', title: 'The test that matters', text: 'A useful compressed representation should shorten future data drawn from the same structure, not merely re-encode the observations that were already seen.' }
+                ]
+            },
+            {
+                id: 'sec-randomness',
+                title: '14. Randomness is the part no intelligence can compress away',
+                blocks: [
+                    { type: 'p', text: 'Some data are incompressible relative to a model class. Algorithmically random strings have no description substantially shorter than the strings themselves. Statistical noise also creates residual uncertainty that a predictor cannot eliminate even when the underlying distribution is known.' },
+                    { type: 'p', text: 'This is not a failure of the learner. If the environment contains genuine entropy, the best possible model should represent that uncertainty rather than inventing a false pattern. A system that always finds a compact story can be worse than one that knows when the residual is irreducible.' },
+                    { type: 'p', text: 'The limit is important because “more compression” is not always “more truth.” A wrong model can compress a small sample by chance. Reliable intelligence needs calibrated uncertainty and evidence that the regularity survives new data.' }
+                ]
+            },
+            {
+                id: 'sec-agency',
+                title: '15. Compression does not by itself give agency, causality, or goals',
+                blocks: [
+                    { type: 'p', text: 'The compression thesis is strongest as a theory of learning and representation. It is weaker as a complete theory of intelligence. An agent must often choose actions, collect information, reason about interventions, maintain goals, allocate compute, and trade off consequences across time.' },
+                    { type: 'p', text: 'A passive compressor models the distribution of observations. Causal reasoning asks a different question: what would happen if the system intervened and changed a variable? Two models can compress observational data equally well while making different predictions under intervention.' },
+                    { type: 'p', text: 'Likewise, compression does not specify what an agent should value. A perfect predictive model can describe harmful and beneficial outcomes equally well. Goals, preferences, constraints, and action selection require additional structure.' },
+                    { type: 'callout', title: 'Precise conclusion', text: 'Compression is a powerful account of discovering reusable structure. It is not, by itself, a full account of intelligent action.' }
+                ]
+            },
+            {
+                id: 'sec-strongest',
+                title: '16. The strongest defensible version of the thesis',
+                blocks: [
+                    { type: 'p', text: 'A technically strong version of “compression is intelligence” is this: a central part of intelligence is constructing compact internal models that preserve the information needed to predict and act across many situations. Compactness matters because it forces the model to reuse structure. Prediction matters because it tests whether that structure is real. Task relevance matters because not every detail deserves to be preserved.' },
+                    { type: 'p', text: 'Under that framing, Shannon entropy explains the cost of uncertainty, probabilistic coding ties prediction to bits, MDL explains why complexity must be paid for, Kolmogorov complexity gives the unattainable ideal of shortest explanation, and rate-distortion theory explains why useful representations can discard irrelevant detail.' },
+                    { type: 'p', text: 'The slogan is therefore best treated as a design principle, not an identity theorem. When a system becomes better at finding compact, transferable, decision-relevant structure, it becomes better at several core operations we call intelligent. But intelligence also includes choosing what to model, what to preserve, what to do, and what consequences matter.' }
+                ]
+            }
+        ]);
+
+        const SequenceSchema = z.string().min(4, 'Use at least 4 symbols.').max(240, 'Keep the sequence at 240 symbols or fewer.').regex(/^[A-Da-d\s]+$/, 'Only A, B, C, D, and spaces are allowed.');
+        const SeedSchema = z.string().min(1, 'Seed cannot be empty.').max(32, 'Seed must be 32 characters or fewer.').regex(/^[A-Za-z0-9_-]+$/, 'Use letters, numbers, _ or -.');
+        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+        const log2 = (value) => Math.log(value) / Math.log(2);
+        const safeLog2 = (value) => value > 0 ? log2(value) : 0;
+        const normalizeSequence = (value) => value.toUpperCase().replace(/\s+/g, '');
+        
+        const hashSeed = (text) => {
+            let h = 2166136261 >>> 0;
+            for (let i = 0; i < text.length; i++) {
+                h ^= text.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            return h >>> 0;
+        };
+
+        const mulberry32 = (seed) => {
+            let a = seed >>> 0;
+            return () => {
+                a |= 0; a = a + 0x6D2B79F5 | 0;
+                let t = Math.imul(a ^ a >>> 15, 1 | a);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        };
+
+        const countsOf = (sequence) => {
+            const counts = {};
+            for (const symbol of sequence) counts[symbol] = (counts[symbol] || 0) + 1;
+            return counts;
+        };
+
+        const alphabetOf = (sequence) => {
+            const unique = Array.from(new Set(sequence.split(''))).sort();
+            return unique.length ? unique : ['A', 'B'];
+        };
+
+        const empiricalEntropy = (sequence) => {
+            const n = sequence.length;
+            if (!n) return 0;
+            const counts = countsOf(sequence);
+            return Object.values(counts).reduce((sum, count) => {
+                const p = count / n;
+                return sum - p * safeLog2(p);
+            }, 0);
+        };
+
+        const fixedWidthBits = (sequence) => {
+            if (!sequence.length) return 0;
+            const k = Math.max(2, alphabetOf(sequence).length);
+            const bitsPerSymbol = Math.ceil(log2(k));
+            return sequence.length * bitsPerSymbol;
+        };
+
+        const idealIIDBits = (sequence, smoothing = 0.5) => {
+            const n = sequence.length;
+            if (!n) return 0;
+            const alphabet = alphabetOf(sequence);
+            const counts = countsOf(sequence);
+            const denominator = n + smoothing * alphabet.length;
+            let bits = 0;
+            for (const symbol of sequence) {
+                const p = ((counts[symbol] || 0) + smoothing) / denominator;
+                bits += -safeLog2(p);
+            }
+            return bits;
+        };
+
+        const eliasGammaLength = (positiveInteger) => {
+            const value = Math.max(1, Math.floor(positiveInteger));
+            const floorLog = Math.floor(log2(value));
+            return 2 * floorLog + 1;
+        };
+
+        const runLengthBits = (sequence) => {
+            if (!sequence.length) return 0;
+            const alphabet = alphabetOf(sequence);
+            const symbolBits = Math.ceil(log2(Math.max(2, alphabet.length)));
+            let bits = 0, current = sequence[0], run = 1;
+            for (let i = 1; i < sequence.length; i++) {
+                if (sequence[i] === current) run += 1;
+                else {
+                    bits += symbolBits + eliasGammaLength(run);
+                    current = sequence[i];
+                    run = 1;
+                }
+            }
+            bits += symbolBits + eliasGammaLength(run);
+            return bits;
+        };
+
+        const lz78Bits = (sequence) => {
+            if (!sequence.length) return { bits: 0, phrases: 0 };
+            const alphabet = alphabetOf(sequence);
+            const symbolBits = Math.ceil(log2(Math.max(2, alphabet.length + 1)));
+            const dictionary = new Map();
+            let phrase = '', phrases = 0, bits = 0, dictionarySize = 1;
+            for (const symbol of sequence) {
+                const candidate = phrase + symbol;
+                if (dictionary.has(candidate)) { phrase = candidate; continue; }
+                const pointerBits = Math.max(1, Math.ceil(log2(dictionarySize + 1)));
+                bits += pointerBits + symbolBits;
+                dictionary.set(candidate, dictionarySize);
+                dictionarySize += 1; phrases += 1; phrase = '';
+            }
+            if (phrase.length) {
+                bits += Math.max(1, Math.ceil(log2(dictionarySize + 1)));
+                phrases += 1;
+            }
+            return { bits, phrases };
+        };
+
+        const lz78Parse = (sequence) => {
+            if (!sequence.length) return [];
+            const dictionary = new Set();
+            let phrase = '';
+            const chunks = [];
+            for (const symbol of sequence) {
+                const candidate = phrase + symbol;
+                if (dictionary.has(candidate)) {
+                    phrase = candidate;
+                } else {
+                    chunks.push(candidate);
+                    dictionary.add(candidate);
+                    phrase = '';
+                }
+            }
+            if (phrase.length) chunks.push(phrase);
+            return chunks;
+        };
+
+        const findContextMatches = (sequence, order) => {
+            if (sequence.length <= order) return [];
+            const context = sequence.slice(-order);
+            const matches = [];
+            for (let i = 0; i <= sequence.length - order - 1; i++) {
+                if (sequence.slice(i, i + order) === context) {
+                    matches.push({ index: i, nextSymbol: sequence[i + order] });
+                }
+            }
+            return matches;
+        };
+
+        const makeContextCounts = (sequence, order, alphabet) => {
+            const contexts = new Map();
+            for (let i = 0; i < sequence.length; i++) {
+                const contextStart = Math.max(0, i - order);
+                const context = sequence.slice(contextStart, i).padStart(order, '^');
+                if (!contexts.has(context)) {
+                    const row = {}; alphabet.forEach(symbol => row[symbol] = 0);
+                    contexts.set(context, row);
+                }
+                const row = contexts.get(context);
+                row[sequence[i]] = (row[sequence[i]] || 0) + 1;
+            }
+            return contexts;
+        };
+
+        const markovCode = (sequence, order, options = {}) => {
+            const smoothing = options.smoothing ?? 0.5;
+            const alphabet = options.alphabet || alphabetOf(sequence);
+            const trainSequence = options.trainSequence || sequence;
+            if (!sequence.length) return { dataBits: 0, modelBits: 0, totalBits: 0, contexts: 0 };
+            const counts = makeContextCounts(trainSequence, order, alphabet);
+            let dataBits = 0;
+            for (let i = 0; i < sequence.length; i++) {
+                const contextStart = Math.max(0, i - order);
+                const context = sequence.slice(contextStart, i).padStart(order, '^');
+                const row = counts.get(context);
+                const total = row ? alphabet.reduce((sum, symbol) => sum + (row[symbol] || 0), 0) : 0;
+                const count = row ? (row[sequence[i]] || 0) : 0;
+                const probability = (count + smoothing) / (total + smoothing * alphabet.length);
+                dataBits += -safeLog2(probability);
+            }
+            const contexts = counts.size;
+            const freeParameters = contexts * Math.max(1, alphabet.length - 1);
+            const precisionBits = Math.max(1, Math.ceil(log2(trainSequence.length + 1)));
+            const modelBits = freeParameters * 0.5 * precisionBits;
+            return { dataBits, modelBits, totalBits: dataBits + modelBits, contexts };
+        };
+
+        const nextSymbolDistribution = (contextSequence, order, alphabet) => {
+            const counts = makeContextCounts(contextSequence, order, alphabet);
+            const context = contextSequence.slice(Math.max(0, contextSequence.length - order)).padStart(order, '^');
+            const row = counts.get(context) || {};
+            const smoothing = 0.5;
+            const total = alphabet.reduce((sum, symbol) => sum + (row[symbol] || 0), 0);
+            const distribution = alphabet.map(symbol => ({
+                symbol, count: row[symbol] || 0,
+                probability: ((row[symbol] || 0) + smoothing) / (total + smoothing * alphabet.length)
+            }));
+            const normalizer = distribution.reduce((sum, item) => sum + item.probability, 0);
+            return distribution.map(item => ({
+                ...item, probability: item.probability / normalizer, bits: -safeLog2(item.probability / normalizer)
+            }));
+        };
+
+        const generateStructuredSequence = ({ seed, length, regularity, persistence }) => {
+            const random = mulberry32(hashSeed(seed));
+            const motifs = ['ABAC', 'AABC', 'ABCD', 'ABBAC', 'ABCACB', 'AABBCD'];
+            const motif = motifs[Math.floor(random() * motifs.length)];
+            const alphabet = ['A', 'B', 'C', 'D'];
+            let output = '', previous = motif[0];
+            for (let i = 0; i < length; i++) {
+                const target = motif[i % motif.length];
+                let symbol = target;
+                if (random() > regularity) symbol = alphabet[Math.floor(random() * alphabet.length)];
+                if (i > 0 && random() < persistence) symbol = previous;
+                output += symbol; previous = symbol;
+            }
+            return output;
+        };
+
+        const entropyBinary = (p) => {
+            if (p <= 0 || p >= 1) return 0;
+            return -p * log2(p) - (1 - p) * log2(1 - p);
+        };
+
+        const generateBinarySample = ({ seed, length, probabilityOne }) => {
+            const random = mulberry32(hashSeed(seed + '-binary'));
+            let output = '';
+            for (let i = 0; i < length; i++) output += random() < probabilityOne ? '1' : '0';
+            return output;
+        };
+
+        const generateSignal = ({ seed, samples = 128, noise = 0.08 }) => {
+            const random = mulberry32(hashSeed(seed + '-signal'));
+            const data = [];
+            for (let i = 0; i < samples; i++) {
+                const t = i / Math.max(1, samples - 1);
+                const base = 0.52 * Math.sin(2 * Math.PI * 2 * t) + 0.26 * Math.sin(2 * Math.PI * 5 * t + 0.6) + (t > 0.58 ? 0.22 : -0.08);
+                const jitter = (random() - 0.5) * 2 * noise;
+                data.push({ index: i, original: clamp(base + jitter, -1, 1) });
+            }
+            return data;
+        };
+
+        const quantizeSignal = (signal, levels) => {
+            const safeLevels = Math.max(2, Math.floor(levels));
+            const step = 2 / (safeLevels - 1);
+            const quantized = signal.map(point => {
+                const bucket = Math.round((point.original + 1) / step);
+                const reconstructed = -1 + bucket * step;
+                return { ...point, bucket, reconstructed: clamp(reconstructed, -1, 1) };
+            });
+            const mse = quantized.reduce((sum, point) => {
+                const error = point.original - point.reconstructed;
+                return sum + error * error;
+            }, 0) / Math.max(1, quantized.length);
+            const bucketSequence = quantized.map(point => String.fromCharCode(65 + point.bucket));
+            const rate = empiricalEntropy(bucketSequence.join(''));
+            return { data: quantized, mse, rate };
+        };
+
+        const computeRateDistortionCurve = (signal, lambda) => {
+            const rows = [];
+            for (let levels = 2; levels <= 32; levels++) {
+                const result = quantizeSignal(signal, levels);
+                rows.push({ levels, rate: result.rate, distortion: result.mse, objective: result.rate + lambda * result.mse });
+            }
+            return rows;
+        };
+
+        const summarizeCompressors = (sequence) => {
+            const normalized = normalizeSequence(sequence);
+            const raw = fixedWidthBits(normalized);
+            const iid = idealIIDBits(normalized);
+            const rle = runLengthBits(normalized);
+            const lz = lz78Bits(normalized);
+            const markov1 = markovCode(normalized, 1);
+            const markov2 = markovCode(normalized, 2);
+            return [
+                { name: 'Fixed width', bits: raw, model: 'No learned structure', note: 'Reference cost' },
+                { name: 'IID probability', bits: iid, model: 'Global symbol frequencies', note: 'Captures bias only' },
+                { name: 'Run-length', bits: rle, model: 'Repeated adjacent symbols', note: 'Captures long runs' },
+                { name: 'LZ78 estimate', bits: lz.bits, model: `${lz.phrases} parsed phrases`, note: 'Captures recurring substrings' },
+                { name: 'Markov order 1', bits: markov1.totalBits, model: `${markov1.contexts} contexts`, note: 'Pays model cost' },
+                { name: 'Markov order 2', bits: markov2.totalBits, model: `${markov2.contexts} contexts`, note: 'Richer conditional structure' }
+            ].map(item => ({ ...item, ratio: raw > 0 ? item.bits / raw : 1, savings: raw > 0 ? 1 - item.bits / raw : 0 }));
+        };
+
+        const buildMDLRows = (sequence) => {
+            const normalized = normalizeSequence(sequence);
+            const splitIndex = Math.max(4, Math.floor(normalized.length * 0.7));
+            const train = normalized.slice(0, splitIndex);
+            const test = normalized.slice(splitIndex);
+            const alphabet = alphabetOf(normalized);
+            const rows = [];
+            for (let order = 0; order <= 5; order++) {
+                const training = markovCode(train, order, { alphabet, trainSequence: train });
+                const testScore = markovCode(test, order, { alphabet, trainSequence: train });
+                rows.push({
+                    order, trainDataBits: training.dataBits, modelBits: training.modelBits,
+                    mdlBits: training.totalBits, heldOutBits: testScore.dataBits, contexts: training.contexts,
+                    testBitsPerSymbol: test.length ? testScore.dataBits / test.length : 0
+                });
+            }
+            return { train, test, rows };
+        };
+
+        const AppStateSchema = z.object({
+            regularity: z.number().min(0).max(1), persistence: z.number().min(0).max(0.9),
+            sampleLength: z.number().int().min(24).max(200), entropyBias: z.number().min(0.01).max(0.99),
+            markovOrder: z.number().int().min(0).max(5), quantLevels: z.number().int().min(2).max(32),
+            distortionWeight: z.number().min(0).max(100), signalNoise: z.number().min(0).max(0.5)
+        });
+
+        const useLessonStore = create((set, get) => ({
+            theme: localStorage.getItem('compression-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+            fontSizeMultiplier: 1.0, seed: 'structure-17', seedError: '',
+            sequence: 'ABACABACABACABACABADABACABACABAC', sequenceDraft: 'ABACABACABACABACABADABACABACABAC', sequenceError: '',
+            regularity: 0.92, persistence: 0.08, sampleLength: 80, entropyBias: 0.82, markovOrder: 2,
+            quantLevels: 8, distortionWeight: 18, signalNoise: 0.08, renderTick: 0,
+
+            update: (partial) => {
+                try {
+                    const numericKeys = ['regularity', 'persistence', 'sampleLength', 'entropyBias', 'markovOrder', 'quantLevels', 'distortionWeight', 'signalNoise'];
+                    const numericPartial = {};
+                    numericKeys.forEach(key => { if (partial[key] !== undefined) numericPartial[key] = partial[key]; });
+                    if (Object.keys(numericPartial).length) AppStateSchema.partial().parse(numericPartial);
+                    set(partial);
+                } catch (error) { console.error('State validation failed', error); }
+            },
+            toggleTheme: () => {
+                const newTheme = get().theme === 'dark' ? 'light' : 'dark';
+                set({ theme: newTheme });
+                localStorage.setItem('compression-theme', newTheme);
+                document.documentElement.classList.toggle('dark', newTheme === 'dark');
+            },
+            increaseFontSize: () => set(state => ({ fontSizeMultiplier: Math.min(1.4, state.fontSizeMultiplier + 0.1) })),
+            decreaseFontSize: () => set(state => ({ fontSizeMultiplier: Math.max(0.9, state.fontSizeMultiplier - 0.1) })),
+            setSequenceDraft: (value) => {
+                const result = SequenceSchema.safeParse(value);
+                set({ sequenceDraft: value, sequenceError: result.success ? '' : result.error.issues[0]?.message || 'Invalid sequence.' });
+            },
+            commitSequence: () => {
+                const draft = get().sequenceDraft;
+                const result = SequenceSchema.safeParse(draft);
+                if (!result.success) { set({ sequenceError: result.error.issues[0]?.message || 'Invalid sequence.' }); return false; }
+                const normalized = normalizeSequence(draft);
+                set({ sequence: normalized, sequenceDraft: normalized, sequenceError: '', renderTick: Date.now() });
+                return true;
+            },
+            setSeed: (value) => {
+                const result = SeedSchema.safeParse(value);
+                set({ seed: value, seedError: result.success ? '' : result.error.issues[0]?.message || 'Invalid seed.' });
+            },
+            generateSequence: () => {
+                const state = get();
+                const seedResult = SeedSchema.safeParse(state.seed);
+                if (!seedResult.success) { set({ seedError: seedResult.error.issues[0]?.message || 'Invalid seed.' }); return; }
+                const generated = generateStructuredSequence({ seed: state.seed, length: state.sampleLength, regularity: state.regularity, persistence: state.persistence });
+                set({ sequence: generated, sequenceDraft: generated, sequenceError: '', renderTick: Date.now() });
+            },
+            randomizeSeed: () => {
+                const value = `seed-${Math.floor(Math.random() * 999999)}`;
+                set({ seed: value, seedError: '' });
+                get().generateSequence();
+            }
+        }));
+
+        class ErrorBoundary extends React.Component {
+            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            render() {
+                if (this.state.hasError) return (
+                    <div className="p-6 m-6 bg-apple-surface border border-apple-red/20 rounded-2xl shadow-sm">
+                        <h2 className="text-lg font-semibold text-apple-red mb-2 flex items-center gap-2"><Lucide.AlertCircle size={20} /> Error occurred</h2>
+                        <p className="font-mono text-sm text-apple-textMuted">{this.state.error?.message || 'Unknown error'}</p>
+                    </div>
+                );
+                return this.props.children;
+            }
+        }
+
+        const GlassSlider = React.memo(({ label, symbol, min, max, step, value, onChange, formatter }) => {
+            const percentage = ((value - min) / (max - min)) * 100;
+            const handleInput = useCallback((e) => onChange(parseFloat(e.target.value)), [onChange]);
+            const shown = formatter ? formatter(value) : value.toFixed(step < 1 ? (step < 0.01 ? 3 : 2) : 0);
+            
+            const trackStyle = {
+                background: `linear-gradient(to right, var(--apple-accent) 0%, var(--apple-accent) ${percentage}%, var(--apple-border) ${percentage}%, var(--apple-border) 100%)`
+            };
+
+            return (
+                <div className="space-y-2 w-full animate-enter">
+                    <div className="flex justify-between items-baseline text-[14px] font-medium text-apple-text">
+                        <span>{label} {symbol && <span className="text-apple-textMuted font-normal font-mono ml-1">{symbol}</span>}</span>
+                        <span className="text-apple-accent font-semibold">{shown}</span>
+                    </div>
+                    <div className="relative w-full h-8 flex items-center">
+                        <div className="absolute left-0 right-0 h-[6px] rounded-full pointer-events-none" style={trackStyle}></div>
+                        <input type="range" min={min} max={max} step={step} value={value} onChange={handleInput} className="apple-slider relative z-10 w-full" />
+                    </div>
+                </div>
+            );
+        });
+
+        // Replacing harsh borders with soft surface contrast
+        const FigurePanel = ({ children, className = '' }) => (
+            <figure className={cn('bg-apple-surface rounded-[24px] sm:rounded-[32px] p-6 sm:p-10 animate-enter', className)}>
+                {children}
+            </figure>
+        );
+
+        const Stat = ({ label, value, detail, tone = 'normal' }) => (
+            <div className="p-4 bg-apple-surfaceElevated rounded-2xl min-w-0 flex flex-col justify-center shadow-apple-sm">
+                <div className="text-[12px] uppercase tracking-wider font-semibold text-apple-textMuted mb-1">{label}</div>
+                <div className={cn('text-[24px] font-semibold tracking-tight truncate font-display', tone === 'accent' ? 'text-apple-accent' : tone === 'danger' ? 'text-apple-red' : 'text-apple-text')}>{value}</div>
+                {detail && <div className="text-[13px] font-medium text-apple-textMuted mt-1 truncate">{detail}</div>}
+            </div>
+        );
+
+        const Button = ({ onClick, children, variant = 'secondary', disabled = false, className = '', icon }) => {
+            const baseStyle = "px-4 py-2.5 rounded-full text-[14px] font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-[0.98]";
+            const variants = {
+                primary: "bg-apple-accent text-white hover:bg-apple-accentHover shadow-apple-sm",
+                secondary: "bg-apple-surfaceElevated text-apple-text hover:bg-apple-border/50 shadow-apple-sm",
+                outline: "bg-transparent text-apple-text hover:bg-apple-surface"
+            };
+            return (
+                <button onClick={onClick} disabled={disabled} className={cn(baseStyle, variants[variant], disabled && "opacity-50 cursor-not-allowed", className)}>
+                    {icon && <span className="opacity-80">{icon}</span>}
+                    {children}
+                </button>
+            );
+        };
+
+        const InputText = ({ value, onChange, placeholder, error }) => (
+            <div className="w-full">
+                <input 
+                    type="text" 
+                    value={value} 
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    className={cn(
+                        "w-full bg-apple-surfaceElevated rounded-xl px-4 py-3 text-[14px] text-apple-text font-mono transition-all focus:outline-none focus:ring-2 focus:ring-apple-accent/50 shadow-apple-sm",
+                        error && "focus:ring-apple-red/50"
+                    )}
+                />
+            </div>
+        );
+
+        const SequenceWorkbench = ({ compact = false }) => {
+            const store = useLessonStore();
+            const normalized = normalizeSequence(store.sequence);
+            return (
+                <div className="space-y-5 bg-apple-surfaceElevated rounded-[24px] p-6 shadow-apple-sm">
+                    <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-[16px] font-semibold text-apple-text font-display flex items-center gap-2"><Lucide.TextSelect size={20} className="text-apple-accent" /> Source Sequence</h3>
+                        {!compact && <Button variant="secondary" onClick={store.randomizeSeed} icon={<Lucide.Shuffle size={14} />} className="py-1.5 px-3 text-[12px]">New Seed</Button>}
+                    </div>
+                    {!compact && (
+                        <div className="grid sm:grid-cols-[1fr_auto] gap-3 items-end">
+                            <div>
+                                <label className="text-[12px] font-medium text-apple-textMuted block mb-2 ml-1">Generation Seed</label>
+                                <InputText value={store.seed} onChange={(e) => store.setSeed(e.target.value)} error={store.seedError} />
+                            </div>
+                            <Button variant="primary" onClick={store.generateSequence} disabled={Boolean(store.seedError)}>Generate</Button>
+                        </div>
+                    )}
+                    {store.seedError && <p className="text-[12px] text-apple-red px-1">{store.seedError}</p>}
+                    <div>
+                        <div className="flex justify-between items-center mb-2 px-1">
+                            <label className="text-[12px] font-medium text-apple-textMuted">Editable symbols (A, B, C, D)</label>
+                            <span className="text-[12px] font-mono text-apple-textMuted">{normalized.length}/240</span>
+                        </div>
+                        <textarea 
+                            value={store.sequenceDraft} 
+                            onChange={(e) => store.setSequenceDraft(e.target.value)} 
+                            rows={compact ? 2 : 4} 
+                            className={cn(
+                                "w-full resize-none bg-apple-surface rounded-xl px-4 py-3 text-[15px] font-mono text-apple-text leading-relaxed transition-all focus:outline-none focus:ring-2 focus:ring-apple-accent/50 shadow-inner",
+                                store.sequenceError && "focus:ring-apple-red/50"
+                            )}
+                        />
+                        <div className="flex items-center justify-between gap-3 mt-3 px-1">
+                            <span className={cn('text-[12px] font-medium', store.sequenceError ? 'text-apple-red' : 'text-apple-textMuted')}>
+                                {store.sequenceError || (store.sequenceDraft !== normalized && 'Unsaved changes')}
+                            </span>
+                            {store.sequenceDraft !== store.sequence && (
+                                <Button variant="primary" onClick={store.commitSequence} className="py-1.5 px-4 text-[12px]">Apply Update</Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CodingFigure = () => {
+            const store = useLessonStore();
+            const rows = useMemo(() => summarizeCompressors(store.sequence), [store.sequence, store.renderTick]);
+            const lzChunks = useMemo(() => lz78Parse(normalizeSequence(store.sequence)), [store.sequence, store.renderTick]);
+            const best = _.minBy(rows, 'bits');
+            const raw = rows[0]?.bits || 0;
+            return (
+                <FigurePanel className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+                    <div className="space-y-8">
+                        <div>
+                            <h3 className="text-[22px] font-bold font-display mb-3">Encoding Efficiency</h3>
+                            <p className="text-[16px] text-apple-textMuted leading-relaxed">Modify the sequence to see how different regularities affect compression performance. A highly structured sequence allows complex models to save space.</p>
+                        </div>
+                        <SequenceWorkbench />
+                    </div>
+                    
+                    <div className="space-y-8">
+                        <div className="h-[240px] -ml-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={rows} margin={{ top: 5, right: 10, left: -10, bottom: 40 }}>
+                                    <CartesianGrid stroke="var(--apple-border)" vertical={false} opacity={0.5} />
+                                    <XAxis dataKey="name" angle={-25} textAnchor="end" interval={0} tick={{ fill: 'var(--apple-text-muted)', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} />
+                                    <YAxis tick={{ fill: 'var(--apple-text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                                    <Tooltip cursor={{fill: 'var(--apple-border)', opacity: 0.3 }} contentStyle={{ backgroundColor: 'var(--apple-surface-elevated)', border: 'none', borderRadius: 16, boxShadow: 'var(--apple-lg)', fontSize: 14, fontWeight: 500, color: 'var(--apple-text)', padding: '12px 16px' }} formatter={(value) => [`${value.toFixed(1)} bits`, 'Cost']} />
+                                    <Bar dataKey="bits" radius={[8, 8, 0, 0]}>
+                                        {rows.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.name === best.name ? 'var(--apple-accent)' : 'var(--apple-text-muted)'} opacity={entry.name === best.name ? 1 : 0.4} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        
+                        <div className="bg-apple-surfaceElevated rounded-[24px] p-6 shadow-apple-sm">
+                            <div className="text-[14px] font-bold text-apple-text mb-4 font-display flex items-center gap-2"><Lucide.SearchCode size={18} className="text-apple-accent"/> Dictionary Parsing Insight</div>
+                            <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto no-scrollbar pb-2">
+                                {lzChunks.slice(0, 40).map((chunk, i) => (
+                                    <span key={i} className="px-2 py-1 bg-apple-surface rounded-lg text-[13px] font-mono text-apple-text border border-apple-border/50 whitespace-nowrap shadow-sm">
+                                        {chunk.slice(0, -1)}<span className="text-apple-accent font-bold">{chunk.slice(-1)}</span>
+                                    </span>
+                                ))}
+                                {lzChunks.length > 40 && <span className="px-2 py-1 text-[13px] text-apple-textMuted font-mono">...</span>}
+                            </div>
+                            <div className="mt-4 text-[13px] text-apple-textMuted leading-relaxed border-t border-apple-border/50 pt-4">
+                                LZ78 dynamically breaks the sequence into unique phrases. Recurring structures mean fewer new phrases are created, driving down the average bits per symbol by referencing history.
+                            </div>
+                        </div>
+                    </div>
+                </FigurePanel>
+            );
+        };
+
+        const EntropyFigure = () => {
+            const store = useLessonStore();
+            const curve = useMemo(() => _.range(1, 100).map(i => ({ p: i / 100, entropy: entropyBinary(i / 100) })), []);
+            const sample = useMemo(() => generateBinarySample({ seed: store.seed, length: store.sampleLength, probabilityOne: store.entropyBias }), [store.seed, store.sampleLength, store.entropyBias]);
+            const empiricalP = sample.split('').filter(x => x === '1').length / sample.length;
+            
+            const surprise1 = -safeLog2(store.entropyBias);
+            const surprise0 = -safeLog2(1 - store.entropyBias);
+
+            return (
+                <FigurePanel>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-10">
+                        <div>
+                            <h3 className="text-[22px] font-bold font-display mb-3">Entropy Landscape</h3>
+                            <p className="text-[16px] text-apple-textMuted leading-relaxed mb-8">Adjust the coin bias. Extreme probabilities generate highly predictable sequences. Below, notice how the "surprise" of each token shifts based on its rarity.</p>
+                            
+                            <div className="space-y-8">
+                                <GlassSlider label="Probability of 1" symbol="p" min={0.01} max={0.99} step={0.01} value={store.entropyBias} onChange={(value) => store.update({ entropyBias: value })} formatter={(v) => v.toFixed(2)} />
+                                <GlassSlider label="Sample length" symbol="n" min={24} max={200} step={1} value={store.sampleLength} onChange={(value) => store.update({ sampleLength: value })} />
+                            </div>
+                        </div>
+                        
+                        <div className="flex flex-col justify-center">
+                            <div className="grid grid-cols-2 gap-4 mb-8">
+                                <Stat label="Theoretical Entropy" value={`${entropyBinary(store.entropyBias).toFixed(3)} b`} tone="accent" detail="Expected average" />
+                                <Stat label="Empirical p(1)" value={empiricalP.toFixed(3)} detail="Actual frequency" />
+                            </div>
+                            <div className="h-[200px] -ml-4">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={curve} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                        <CartesianGrid stroke="var(--apple-border)" vertical={false} opacity={0.5} />
+                                        <XAxis dataKey="p" tick={{ fill: 'var(--apple-text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} dy={10} />
+                                        <YAxis domain={[0, 1]} tick={{ fill: 'var(--apple-text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'var(--apple-surface-elevated)', border: 'none', borderRadius: 16, boxShadow: 'var(--apple-lg)', fontSize: 14, fontWeight: 500 }} formatter={(v)=>[v.toFixed(3), 'Entropy (bits)']} />
+                                        <ReferenceLine x={store.entropyBias} stroke="var(--apple-text)" strokeDasharray="4 4" strokeWidth={2} />
+                                        <Area type="monotone" dataKey="entropy" stroke="var(--apple-accent)" fill="var(--apple-accent)" fillOpacity={0.15} strokeWidth={3} isAnimationActive={false} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-apple-surfaceElevated rounded-[24px] p-6 sm:p-8 shadow-apple-sm">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                            <div>
+                                <h4 className="text-[16px] font-bold text-apple-text font-display flex items-center gap-2"><Lucide.Zap size={18} className="text-apple-orange"/> Information Content</h4>
+                                <p className="text-[13px] text-apple-textMuted mt-1">Tokens carrying more surprise require more bits to encode.</p>
+                            </div>
+                            <div className="flex gap-3 text-[13px] font-mono text-apple-textMuted bg-apple-surface px-4 py-2 rounded-xl shadow-inner border border-apple-border/30">
+                                <span>'1': {surprise1.toFixed(2)}b</span>
+                                <span className="opacity-50">|</span>
+                                <span>'0': {surprise0.toFixed(2)}b</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {sample.split('').map((token, index) => {
+                                const isOne = token === '1';
+                                const surprise = isOne ? surprise1 : surprise0;
+                                const intensity = Math.min(1, surprise / 4);
+                                const style = {
+                                    backgroundColor: `rgba(0, 122, 255, ${intensity * 0.15})`,
+                                    color: `rgba(0, 122, 255, ${Math.max(0.4, intensity)})`,
+                                    transform: `scale(${Math.max(0.9, Math.min(1.15, 0.85 + surprise * 0.1))})`
+                                };
+                                return (
+                                    <span className="token-cell shadow-none font-mono" style={style} key={index} title={`Surprise: ${surprise.toFixed(2)} bits`}>
+                                        {token}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </FigurePanel>
+            );
+        };
+
+        const MDLFigure = () => {
+            const store = useLessonStore();
+            const result = useMemo(() => buildMDLRows(store.sequence), [store.sequence, store.renderTick]);
+            const bestMdl = _.minBy(result.rows, 'mdlBits');
+            const bestTest = _.minBy(result.rows, 'testBitsPerSymbol');
+            
+            return (
+                <FigurePanel>
+                    <div className="mb-12 text-center max-w-2xl mx-auto">
+                        <h3 className="text-[22px] font-bold font-display mb-3">Model Selection & Overfitting</h3>
+                        <p className="text-[16px] text-apple-textMuted leading-relaxed">As model complexity increases, training data cost drops but the model description cost rises. The MDL optimum balances both, typically forming a "U" shape curve that aligns with generalization.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start mb-8">
+                        <div className="space-y-8">
+                            <SequenceWorkbench compact />
+                            <div className="grid grid-cols-2 gap-4">
+                                <Stat label="MDL Sweet Spot" value={`k = ${bestMdl.order}`} tone="accent" detail="Minimizes total bits" />
+                                <Stat label="Generalization" value={`k = ${bestTest.order}`} detail="Best on held-out data" />
+                            </div>
+                        </div>
+
+                        <div className="h-[340px] -ml-4 bg-apple-surfaceElevated rounded-[24px] p-6 shadow-apple-sm flex flex-col">
+                            <div className="text-[14px] font-bold text-apple-text mb-4 font-display text-center flex items-center justify-center gap-2"><Lucide.Layers size={18} className="text-apple-textMuted"/> Description Length Decomposition</div>
+                            <div className="flex-1">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={result.rows} margin={{ top: 10, right: 0, left: -10, bottom: 20 }}>
+                                        <CartesianGrid stroke="var(--apple-border)" vertical={false} opacity={0.5} />
+                                        <XAxis dataKey="order" tick={{ fill: 'var(--apple-text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} dy={10} />
+                                        <YAxis tick={{ fill: 'var(--apple-text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                                        <Tooltip cursor={{fill: 'var(--apple-surface)'}} contentStyle={{ backgroundColor: 'var(--apple-surface-elevated)', border: 'none', borderRadius: 16, boxShadow: 'var(--apple-lg)', fontSize: 13 }} formatter={(value, name) => [value.toFixed(1), name]} />
+                                        <Legend wrapperStyle={{ fontSize: 13, paddingTop: 10 }} iconType="circle" />
+                                        <Bar dataKey="trainDataBits" name="Data Cost" stackId="a" fill="var(--apple-chart-1)" radius={[0, 0, 6, 6]} opacity={0.9} />
+                                        <Bar dataKey="modelBits" name="Model Cost" stackId="a" fill="var(--apple-orange)" radius={[6, 6, 0, 0]} opacity={0.9} />
+                                        <Line type="monotone" dataKey="heldOutBits" name="Held-out Data" stroke="var(--apple-accent)" strokeWidth={3} dot={{r: 5, strokeWidth: 2, fill: 'var(--apple-bg)'}} isAnimationActive={false} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                </FigurePanel>
+            );
+        };
+
+        const PredictionFigure = () => {
+            const store = useLessonStore();
+            const sequence = normalizeSequence(store.sequence);
+            const alphabet = alphabetOf(sequence);
+            const order = Math.max(1, store.markovOrder);
+            const distribution = useMemo(() => nextSymbolDistribution(sequence, store.markovOrder, alphabet), [sequence, store.markovOrder]);
+            const winner = _.maxBy(distribution, 'probability');
+            
+            const context = sequence.slice(-order);
+            const matches = useMemo(() => findContextMatches(sequence, order), [sequence, order]);
+            
+            return (
+                <FigurePanel className="max-w-5xl mx-auto">
+                    <div className="text-center mb-10">
+                        <h3 className="text-[22px] font-bold font-display mb-3">Compression as Prediction</h3>
+                        <p className="text-[16px] text-apple-textMuted leading-relaxed max-w-3xl mx-auto">The candidate symbol requiring the fewest additional bits is assigned the highest probability. This is computationally equivalent to finding historical context matches.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+                        <div className="md:col-span-5 space-y-8">
+                            <div className="bg-apple-surfaceElevated rounded-[24px] p-6 shadow-apple-sm space-y-6">
+                                <GlassSlider label="Markov Context Order" symbol="k" min={1} max={5} step={1} value={store.markovOrder} onChange={(value) => store.update({ markovOrder: value })} />
+                                <div className="p-5 rounded-2xl bg-apple-surface text-center shadow-inner">
+                                    <div className="text-[12px] uppercase tracking-wider font-semibold text-apple-textMuted mb-2">Current Context Tape</div>
+                                    <div className="font-mono text-[24px] text-apple-text tracking-widest truncate">
+                                        <span className="text-apple-textMuted opacity-40">…{sequence.slice(0, -order).slice(-6)}</span>
+                                        <span className="font-bold text-apple-accent bg-apple-accent/15 px-2 py-1 rounded-lg">{context}</span>
+                                        <span className="text-apple-text animate-pulse ml-2 font-light">_</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                {distribution.map(item => (
+                                    <div key={item.symbol} className="flex items-center gap-5 p-4 rounded-2xl bg-apple-surfaceElevated shadow-apple-sm transition-transform hover:scale-[1.02]">
+                                        <div className={cn("w-12 h-12 shrink-0 rounded-full flex items-center justify-center font-display font-bold text-xl shadow-sm", item.symbol === winner?.symbol ? "bg-apple-accent text-white" : "bg-apple-surface text-apple-text")}>
+                                            {item.symbol}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-end mb-2">
+                                                <span className="text-[14px] font-medium text-apple-text">{item.count} occurrences</span>
+                                                <span className="text-[16px] font-bold font-mono text-apple-text">{(item.probability * 100).toFixed(1)}%</span>
+                                            </div>
+                                            <div className="h-2 bg-apple-surface rounded-full overflow-hidden">
+                                                <div className="h-full bg-apple-accent rounded-full transition-all duration-500 ease-out" style={{ width: `${item.probability * 100}%` }} />
+                                            </div>
+                                            <div className="text-[12px] text-apple-textMuted mt-2 text-right font-mono">{item.bits.toFixed(2)} bit cost</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-7 bg-apple-surfaceElevated rounded-[24px] p-6 sm:p-8 shadow-apple-sm border border-transparent">
+                            <h4 className="text-[16px] font-bold text-apple-text font-display mb-2 flex items-center gap-2"><Lucide.History size={20} className="text-apple-accent"/> Historical Evidence</h4>
+                            <p className="text-[14px] text-apple-textMuted mb-6 leading-relaxed">Scanning the sequence for past occurrences of the context block <span className="font-mono font-bold text-apple-accent px-1.5 py-0.5 bg-apple-accent/10 rounded">{context}</span> to build the predictive distribution.</p>
+                            
+                            <div className="max-h-[460px] overflow-y-auto no-scrollbar space-y-3 pr-2">
+                                {matches.length === 0 ? (
+                                    <div className="text-[15px] text-apple-textMuted text-center py-12 bg-apple-surface rounded-2xl">No historical matches found. Distribution falls back to prior.</div>
+                                ) : (
+                                    matches.map((match, i) => (
+                                        <div key={i} className="flex items-center gap-4 p-4 bg-apple-surface rounded-2xl font-mono text-[15px] shadow-sm">
+                                            <div className="flex-1 text-right text-apple-textMuted truncate opacity-60">
+                                                {sequence.slice(Math.max(0, match.index - 10), match.index)}
+                                            </div>
+                                            <div className="font-bold text-apple-accent bg-apple-accent/15 px-2 py-1 rounded-lg">
+                                                {context}
+                                            </div>
+                                            <div className="text-apple-textMuted mx-2">→</div>
+                                            <div className="font-bold text-apple-text flex-1 flex items-center gap-3">
+                                                <span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-lg shadow-sm", match.nextSymbol === winner?.symbol ? "bg-apple-accent text-white ring-2 ring-apple-accent ring-offset-2 ring-offset-apple-surface" : "bg-apple-surfaceElevated")}>
+                                                    {match.nextSymbol}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </FigurePanel>
+            );
+        };
+
+        const LimitsFigure = () => {
+            const store = useLessonStore();
+            const signal = useMemo(() => generateSignal({ seed: store.seed, samples: 128, noise: store.signalNoise }), [store.seed, store.signalNoise]);
+            const quantized = useMemo(() => quantizeSignal(signal, store.quantLevels), [signal, store.quantLevels]);
+            
+            const chartData = useMemo(() => {
+                return quantized.data.map(d => ({
+                    ...d,
+                    residual: [Math.min(d.original, d.reconstructed), Math.max(d.original, d.reconstructed)]
+                }));
+            }, [quantized.data]);
+            
+            return (
+                <FigurePanel>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                        <div className="lg:col-span-5 space-y-8">
+                            <div>
+                                <h3 className="text-[22px] font-bold font-display mb-3">Lossy Compression</h3>
+                                <p className="text-[16px] text-apple-textMuted leading-relaxed">Intelligence often discards detail to form abstractions. Lower bit rates force the model to ignore fine-grained fluctuations. The shaded area represents information permanently lost.</p>
+                            </div>
+                            
+                            <div className="space-y-6 bg-apple-surfaceElevated p-6 rounded-[24px] shadow-apple-sm">
+                                <GlassSlider label="Quantization Levels" symbol="K" min={2} max={32} step={1} value={store.quantLevels} onChange={(value) => store.update({ quantLevels: value })} />
+                                <GlassSlider label="Irreducible Noise" symbol="σ" min={0} max={0.5} step={0.01} value={store.signalNoise} onChange={(value) => store.update({ signalNoise: value })} formatter={(v) => v.toFixed(2)} />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                                <Stat label="Transmission Rate" value={`${quantized.rate.toFixed(2)} b/sym`} tone="accent" detail="Cost of representation" />
+                                <Stat label="Distortion (MSE)" value={quantized.mse.toFixed(4)} detail="Loss of original detail" />
+                            </div>
+                        </div>
+
+                        <div className="lg:col-span-7 h-[360px] -ml-2 bg-apple-surfaceElevated rounded-[32px] p-6 shadow-apple-sm flex flex-col">
+                            <div className="flex-1">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                        <CartesianGrid stroke="var(--apple-border)" vertical={false} opacity={0.5} />
+                                        <XAxis dataKey="index" tick={{ fill: 'var(--apple-text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} dy={10} />
+                                        <YAxis domain={[-1.1, 1.1]} tick={{ fill: 'var(--apple-text-muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'var(--apple-surface-elevated)', border: 'none', borderRadius: 16, boxShadow: 'var(--apple-lg)', fontSize: 13 }} />
+                                        
+                                        <Area type="monotone" dataKey="residual" stroke="none" fill="var(--apple-red)" fillOpacity={0.12} isAnimationActive={false} />
+                                        <Line type="monotone" dataKey="original" name="Source" stroke="var(--apple-text-muted)" dot={false} strokeWidth={2} opacity={0.5} isAnimationActive={false} />
+                                        <Line type="stepAfter" dataKey="reconstructed" name="Compressed" stroke="var(--apple-accent)" dot={false} strokeWidth={3} isAnimationActive={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex justify-center gap-6 mt-6 text-[13px] font-medium text-apple-text">
+                                <div className="flex items-center gap-2"><div className="w-4 h-1 rounded-full bg-apple-textMuted opacity-50"></div> Source</div>
+                                <div className="flex items-center gap-2"><div className="w-4 h-1 rounded-full bg-apple-accent"></div> Reconstructed</div>
+                                <div className="flex items-center gap-2"><div className="w-4 h-4 bg-apple-red/15 rounded-md"></div> Information Lost</div>
+                            </div>
+                        </div>
+                    </div>
+                </FigurePanel>
+            );
+        };
+
+        const SECTION_INTERACTIVES = {
+            'sec-regularity': () => <CodingFigure />,
+            'sec-entropy': () => <EntropyFigure />,
+            'sec-mdl': () => <MDLFigure />,
+            'sec-compression-prediction': () => <PredictionFigure />,
+            'sec-rate-distortion': () => <LimitsFigure />
+        };
+
+        const ArticleBlock = ({ block }) => {
+            if (block.type === 'equation') return (
+                <div className="my-8 p-6 rounded-[24px] bg-apple-surface text-center">
+                    <div className="text-[12px] uppercase font-semibold text-apple-textMuted mb-3 tracking-wide font-display">{block.label}</div>
+                    <div className="font-mono text-[16px] sm:text-[18px] text-apple-text overflow-x-auto whitespace-nowrap">{block.text}</div>
+                </div>
+            );
+            if (block.type === 'callout') return (
+                <div className="my-10 p-8 rounded-[32px] bg-apple-surfaceElevated shadow-apple-md">
+                    <div className="text-[18px] font-bold text-apple-text mb-3 flex items-center gap-3 font-display"><Lucide.Info size={22} className="text-apple-accent" />{block.title}</div>
+                    <p className="text-[16px] leading-relaxed text-apple-textMuted m-0">{block.text}</p>
+                </div>
+            );
+            return <p className="text-[18px] md:text-[20px] leading-[1.65] text-apple-text font-normal apple-prose mb-[1.5em] tracking-[-0.01em]">{block.text}</p>;
+        };
+
+        const MainApp = () => {
+            const store = useLessonStore();
+            
+            return (
+                <ErrorBoundary>
+                    <div className="min-h-screen bg-apple-bg text-apple-text selection:bg-apple-accent/20 selection:text-apple-text font-sans relative">
+                        
+                        {/* Immersive Glass Header */}
+                        <header className="fixed top-0 left-0 right-0 z-50 apple-glass-panel border-b border-apple-border/50 px-4 sm:px-8 py-4 flex justify-between items-center transition-all duration-300">
+                            <div className="font-display font-semibold text-[15px] tracking-tight truncate hidden sm:block opacity-80 hover:opacity-100 transition-opacity">
+                                Compression is Intelligence
+                            </div>
+                            <div className="sm:hidden font-display font-semibold text-[15px] tracking-tight">
+                                C = I
+                            </div>
+                            
+                            <div className="flex items-center gap-4 shrink-0">
+                                <div className="flex items-center bg-apple-surface rounded-full border border-apple-border/50 shadow-inner overflow-hidden">
+                                    <button onClick={store.decreaseFontSize} className="px-3 py-1.5 text-apple-textMuted hover:text-apple-text hover:bg-apple-border/30 transition-colors"><span className="text-[14px]">A</span></button>
+                                    <div className="w-[1px] h-4 bg-apple-border"></div>
+                                    <button onClick={store.increaseFontSize} className="px-3 py-1.5 text-apple-textMuted hover:text-apple-text hover:bg-apple-border/30 transition-colors"><span className="text-[16px] font-semibold">A</span></button>
+                                </div>
+                                <button onClick={store.toggleTheme} className="p-2 rounded-full hover:bg-apple-surface transition-colors text-apple-textMuted hover:text-apple-text" title="Toggle Theme">
+                                    {store.theme === 'dark' ? <Lucide.Sun size={20} /> : <Lucide.Moon size={20} />}
+                                </button>
+                            </div>
+                        </header>
+                        
+                        {/* Central Content Flow */}
+                        <main className="pt-32 pb-40 w-full overflow-x-hidden" style={{ fontSize: `${store.fontSizeMultiplier}rem` }}>
+                            
+                            {/* Title Area */}
+                            <div className="max-w-[700px] mx-auto px-6 md:px-8 mb-20 md:mb-32">
+                                <div className="inline-block px-3 py-1 bg-apple-surface rounded-full text-[12px] font-semibold tracking-wider uppercase text-apple-textMuted mb-6 border border-apple-border/50">Interactive Essay</div>
+                                <h1 className="text-[3em] md:text-[3.5em] font-bold tracking-tight text-apple-text mb-6 leading-[1.05] font-display">Compression is intelligence.</h1>
+                                <p className="text-[1.3em] leading-relaxed text-apple-textMuted max-w-[600px]">Why compact models predict, where description length becomes learning, and why compression is central without being the whole of intelligence.</p>
+                            </div>
+
+                            {/* Articles and Outset Figures */}
+                            <article className="px-4 sm:px-6 md:px-8">
+                                {ARTICLE.map((sec, i) => (
+                                    <section key={sec.id} id={sec.id} className="mb-16 md:mb-24 scroll-mt-32">
+                                        
+                                        {/* Text Constrained Reading Column */}
+                                        <div className="max-w-[700px] mx-auto">
+                                            <h2 className="text-[1.8em] md:text-[2em] font-bold text-apple-text mb-6 tracking-tight font-display">
+                                                {sec.title}
+                                            </h2>
+                                            <div>{sec.blocks.map((block, index) => <ArticleBlock key={index} block={block} />)}</div>
+                                        </div>
+
+                                        {/* Breakout Interactive Figure */}
+                                        {SECTION_INTERACTIVES[sec.id] && (
+                                            <div className="max-w-[960px] mx-auto mt-12 mb-20 lg:mt-16 lg:mb-24 relative z-10 px-2 sm:px-0">
+                                                {SECTION_INTERACTIVES[sec.id]()}
+                                            </div>
+                                        )}
+
+                                    </section>
+                                ))}
+                            </article>
+
+                            <footer className="mt-32 border-t border-apple-border pt-20 pb-20 text-center max-w-[700px] mx-auto px-6">
+                                <div className="w-14 h-14 rounded-full bg-apple-surface flex items-center justify-center mx-auto text-apple-textMuted text-xl mb-6 shadow-sm border border-apple-border/50">⌘</div>
+                                <p className="text-apple-textMuted text-[14px]">An interactive exploration of first principles.</p>
+                            </footer>
+                        </main>
+                    </div>
+                </ErrorBoundary>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<MainApp />);
+    </script>
+</body>
+</html>

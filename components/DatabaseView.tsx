@@ -96,7 +96,6 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
               </div>
               <h1 className="text-3xl font-semibold tracking-[-0.04em]">Saved Sessions</h1>
             </div>
-            <p className="text-sm text-[#94a3b8]">Browse and continue your generated recursive education journeys</p>
           </div>
 
           <div className="flex items-center gap-3">

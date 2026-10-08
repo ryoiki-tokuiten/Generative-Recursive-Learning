@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="An interactive first-principles lesson on the claim that compression is intelligence.">
+    <title>Compression is Intelligence</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('anthropic-theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ant: {
+                            bg: 'var(--ant-bg)',
+                            surface: 'var(--ant-surface)',
+                            surfaceHover: 'var(--ant-surface-hover)',
+                            text: 'var(--ant-text)',
+                            textMuted: 'var(--ant-text-muted)',
+                            accent: 'var(--ant-accent)',
+                            accentHover: 'var(--ant-accent-hover)',
+                            border: 'var(--ant-border)',
+                            chartPrimary: 'var(--ant-chart-primary)',
+                            chartSecondary: 'var(--ant-chart-secondary)',
+                            chartTertiary: 'var(--ant-chart-tertiary)',
+                            danger: 'var(--ant-danger)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        serif: ['Newsreader', 'Charter', 'serif'],
+                        mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+                    }
+                }
+            }
+        };
+    </script>
+    
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.3.1",
+            "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+            "react/jsx-dev-runtime": "https://esm.sh/react@18.3.1/jsx-dev-runtime",
+            "react-dom": "https://esm.sh/react-dom@18.3.1",
+            "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0?external=react,react-dom",
+            "recharts": "https://esm.sh/recharts@2.12.0?external=react,react-dom",
+            "zustand": "https://esm.sh/zustand@4.5.0?external=react",
+            "clsx": "https://esm.sh/clsx@2.1.0",
+            "tailwind-merge": "https://esm.sh/tailwind-merge@2.2.1",
+            "lodash": "https://esm.sh/lodash@4.17.21"
+        }
+    }
+    </script>
+    
+    <style>
+        :root {
+            /* Anthropic Light Theme (Warm, Clean) */
+            --ant-bg: #FAF9F6;
+            --ant-surface: #F2F0EA;
+            --ant-surface-hover: #E8E5DF;
+            --ant-text: #2C2C2A;
+            --ant-text-muted: #767570;
+            --ant-accent: #D97757; 
+            --ant-accent-hover: #C2674A;
+            --ant-border: #E5E3DB;
+            --ant-chart-primary: #D97757;
+            --ant-chart-secondary: #7C9682; 
+            --ant-chart-tertiary: #D4B16A; 
+            --ant-danger: #C94A4A;
+        }
+
+        .dark {
+            /* Anthropic Dark Theme */
+            --ant-bg: #1A1918;
+            --ant-surface: #242322;
+            --ant-surface-hover: #2D2C2B;
+            --ant-text: #EBEBE9;
+            --ant-text-muted: #9E9D99;
+            --ant-accent: #E58B6E;
+            --ant-accent-hover: #D97757;
+            --ant-border: #3D3C3A;
+            --ant-chart-primary: #E58B6E;
+            --ant-chart-secondary: #8FA895;
+            --ant-chart-tertiary: #D4B16A;
+            --ant-danger: #D95353;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--ant-bg);
+            color: var(--ant-text);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        * { box-sizing: border-box; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background-clip: padding-box;
+            background-color: var(--ant-border);
+            border-radius: 3px;
+        }
+
+        /* Minimal Custom Slider */
+        input[type=range].ant-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            outline: none;
+            margin: 8px 0;
+        }
+        input[type=range].ant-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 1px;
+            cursor: pointer;
+            background: var(--ant-border);
+        }
+        input[type=range].ant-slider::-webkit-slider-thumb {
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: var(--ant-accent);
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -5px;
+            transition: transform 0.1s ease;
+        }
+        input[type=range].ant-slider:active::-webkit-slider-thumb {
+            transform: scale(1.3);
+        }
+
+        .ant-prose { font-family: 'Newsreader', 'Charter', serif; }
+        .ant-prose p { margin-bottom: 1.5em; line-height: 1.7; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out both; }
+        
+        .breakout-container {
+            width: 100%;
+            max-width: 1100px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useMemo, useCallback } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { create } from 'zustand';
+        import { clsx } from 'clsx';
+        import { twMerge } from 'tailwind-merge';
+        import _ from 'lodash';
+        import * as Lucide from 'lucide-react';
+        
+        import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid, Cell, ScatterChart, Scatter, Legend } from 'recharts';
+
+        const cn = (...inputs) => twMerge(clsx(inputs));
+
+        const ARTICLE = Object.freeze([
+            {
+                id: 'sec-thesis',
+                title: '1. What the claim actually says',
+                blocks: [
+                    { type: 'p', text: '“Compression is intelligence” is useful only if we state the claim precisely. The strong idea is not that every file compressor is intelligent. The idea is that learning a compact description of data requires discovering regularities, and those regularities are exactly what a system can use to predict, generalize, and form abstractions.' },
+                    { type: 'p', text: 'Suppose we observe a finite sequence x. A learner can always store x verbatim. That solution explains nothing. A better learner finds a shorter program or model M plus a smaller remainder r such that M and r reconstruct x. The compression comes from moving repeated structure out of the data and into the model.' },
+                    { type: 'equation', label: 'The basic accounting identity', text: 'description length = bits(model) + bits(data | model)' },
+                    { type: 'p', text: 'The phrase becomes interesting when “shorter description” is tied to out-of-sample prediction. A compact model earns its compression by assigning high probability to what repeatedly occurs and low probability to what does not. If the same model also predicts unseen samples well, compression has exposed real structure rather than merely memorized the training set.' }
+                ]
+            },
+            {
+                id: 'sec-regularity',
+                title: '2. Regularity is the source of compressibility',
+                blocks: [
+                    { type: 'p', text: 'Compression can only remove redundancy. If every symbol were independent and uniformly random, there would be no stable pattern to exploit. A shorter description becomes possible when observations are biased, repeated, correlated, generated by a small rule, or constrained by context.' },
+                    { type: 'p', text: 'This gives us the first technical bridge to learning. A learning algorithm receives examples and searches for structure that lets it predict parts of those examples from other parts. A compressor receives symbols and searches for structure that lets it encode some symbols using fewer bits given previous symbols or a learned model.' },
+                    { type: 'callout', title: 'Important boundary', text: 'Compressibility is evidence of regularity, not automatically evidence of understanding. A compressor can exploit local statistics without representing causes, goals, or interventions. The thesis becomes stronger as the compression model must transfer across contexts and support prediction under change.' }
+                ]
+            },
+            {
+                id: 'sec-entropy',
+                title: '3. Entropy tells us the irreducible average cost',
+                blocks: [
+                    { type: 'p', text: 'Shannon entropy answers a specific question. If symbols are drawn from a known probability distribution p, what is the smallest average number of bits needed per symbol by an optimal lossless code? For a discrete source, the lower bound is the expected surprise.' },
+                    { type: 'equation', label: 'Entropy', text: 'H(X) = - Σₓ p(x) log₂ p(x)' },
+                    { type: 'p', text: 'The term -log₂ p(x) is the ideal code length for outcome x. Common outcomes receive short descriptions because they are easy to anticipate. Rare outcomes receive long descriptions because they carry more surprise. Entropy is the probability-weighted average of those lengths.' }
+                ]
+            },
+            {
+                id: 'sec-prob-code',
+                title: '4. Probability models and codes are two views of one object',
+                blocks: [
+                    { type: 'p', text: 'A probabilistic predictor can be turned into a code. If a model assigns probability q(x) to an outcome, an ideal arithmetic code spends about -log₂ q(x) bits on that outcome. Modern entropy coders operationalize this connection closely enough that negative log-likelihood is literally an estimate of compressed length.' },
+                    { type: 'p', text: 'This identity is why language modeling, density estimation, and compression are mathematically close. Training a model by minimizing cross-entropy is training it to reduce the expected code length of the data under its predictive distribution.' }
+                ]
+            },
+            {
+                id: 'sec-mdl',
+                title: '5. Minimum description length turns the idea into model selection',
+                blocks: [
+                    { type: 'p', text: 'Minimum description length, or MDL, asks us to choose the model that minimizes the number of bits required to describe both the model and the data given that model. It directly penalizes two bad extremes: a model that is too simple leaves a large residual, while a model that memorizes everything has an enormous model description.' },
+                    { type: 'equation', label: 'Two-part MDL objective', text: 'M* = argmin_M [ L(M) + L(D | M) ]' },
+                    { type: 'p', text: 'The crucial step is that model complexity must be paid for. If we score only training likelihood, a flexible model can encode accidental details. Once parameters have a cost, the system must decide which regularities are worth keeping.' }
+                ]
+            },
+            {
+                id: 'sec-compression-prediction',
+                title: '6. A compressor makes predictions by evaluating continuations',
+                blocks: [
+                    { type: 'p', text: 'The probability-code equivalence gives a concrete prediction procedure. Suppose we have observed a context c and want to predict the next symbol a. For each candidate a, estimate the extra code length required to encode c followed by a. The candidate with the smallest incremental code length is the one the compressor considers most expected.' },
+                    { type: 'equation', label: 'Compression-based next-symbol score', text: 'score(a) = L(ca) - L(c)' },
+                    { type: 'p', text: 'If the code is induced by a probabilistic model, the score is approximately -log₂ p(a|c). Lower additional length means higher conditional probability.' }
+                ]
+            },
+            {
+                id: 'sec-rate-distortion',
+                title: '7. Intelligence often needs lossy compression, not perfect reconstruction',
+                blocks: [
+                    { type: 'p', text: 'Lossless compression must preserve every bit of the original input. Intelligence usually does not need that. A useful internal representation can discard detail as long as the discarded information does not matter for the task. This is the setting of rate-distortion theory.' },
+                    { type: 'equation', label: 'Rate-distortion tradeoff', text: 'minimize  R + λD' },
+                    { type: 'p', text: 'R is the number of bits used by the representation. D is a distortion measure. The multiplier λ determines how much distortion we are willing to tolerate to save bits. Change the distortion measure and the preferred representation changes.' }
+                ]
+            },
+            {
+                id: 'sec-strongest',
+                title: '8. The strongest defensible version of the thesis',
+                blocks: [
+                    { type: 'p', text: 'A technically strong version of “compression is intelligence” is this: a central part of intelligence is constructing compact internal models that preserve the information needed to predict and act across many situations. Compactness matters because it forces the model to reuse structure.' },
+                    { type: 'p', text: 'The slogan is therefore best treated as a design principle, not an identity theorem. When a system becomes better at finding compact, transferable, decision-relevant structure, it becomes better at several core operations we call intelligent.' }
+                ]
+            }
+        ]);
+
+        const log2 = (value) => Math.log(value) / Math.log(2);
+        const safeLog2 = (value) => value > 0 ? log2(value) : 0;
+        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+        const entropyBinary = (p) => (p <= 0 || p >= 1) ? 0 : -p * log2(p) - (1 - p) * log2(1 - p);
+        const alphabetOf = (seq) => Array.from(new Set(seq.split(''))).sort();
+        const countsOf = (seq) => {
+            const c = {};
+            for (const s of seq) c[s] = (c[s] || 0) + 1;
+            return c;
+        };
+
+        const generateSequence = (type, length = 120) => {
+            let seq = '';
+            const rand = () => Math.random();
+            if (type === 'uniform') {
+                const chars = ['A', 'B', 'C', 'D'];
+                for(let i=0; i<length; i++) seq += chars[Math.floor(rand()*4)];
+            } else if (type === 'biased') {
+                for(let i=0; i<length; i++) seq += rand() < 0.85 ? 'A' : (rand() < 0.5 ? 'B' : 'C');
+            } else if (type === 'alternating') {
+                const chars = ['A', 'B'];
+                for(let i=0; i<length; i++) seq += chars[i % 2];
+            } else if (type === 'markov') {
+                const transitions = { 'A': 'B', 'B': 'C', 'C': 'A' };
+                let current = 'A';
+                for(let i=0; i<length; i++) {
+                    seq += current;
+                    current = rand() < 0.9 ? transitions[current] : (rand() < 0.5 ? 'A' : 'B');
+                }
+            }
+            return seq;
+        };
+
+        const fixedWidthBits = (seq) => seq.length * Math.ceil(log2(Math.max(2, alphabetOf(seq).length)));
+        const iidBits = (seq) => {
+            if (!seq.length) return 0;
+            const counts = countsOf(seq);
+            let bits = 0;
+            for(const s of seq) bits += -safeLog2(counts[s] / seq.length);
+            return bits;
+        };
+        const runLengthBits = (seq) => {
+            if (!seq.length) return 0;
+            const alphaBits = Math.ceil(log2(Math.max(2, alphabetOf(seq).length)));
+            const eliasGamma = (v) => 2 * Math.floor(log2(Math.max(1, v))) + 1;
+            let bits = 0, current = seq[0], run = 1;
+            for (let i = 1; i < seq.length; i++) {
+                if (seq[i] === current) run++;
+                else { bits += alphaBits + eliasGamma(run); current = seq[i]; run = 1; }
+            }
+            return bits + alphaBits + eliasGamma(run);
+        };
+        const lz78Bits = (seq) => {
+            if(!seq.length) return 0;
+            const dict = new Map();
+            let dictSize = 1, bits = 0, phrase = '';
+            const symBits = Math.ceil(log2(Math.max(2, alphabetOf(seq).length)));
+            for(const s of seq) {
+                const candidate = phrase + s;
+                if(dict.has(candidate)) { phrase = candidate; continue; }
+                bits += Math.max(1, Math.ceil(log2(dictSize))) + symBits;
+                dict.set(candidate, dictSize++);
+                phrase = '';
+            }
+            if(phrase.length) bits += Math.max(1, Math.ceil(log2(dictSize)));
+            return bits;
+        };
+        const markovCode = (seq, order) => {
+            const alpha = alphabetOf(seq);
+            if (!seq.length) return { dataBits: 0, modelBits: 0, totalBits: 0 };
+            const counts = new Map();
+            for(let i=0; i<seq.length; i++) {
+                const ctx = seq.slice(Math.max(0, i-order), i).padStart(order, '^');
+                if(!counts.has(ctx)) counts.set(ctx, {});
+                counts.get(ctx)[seq[i]] = (counts.get(ctx)[seq[i]] || 0) + 1;
+            }
+            let dataBits = 0;
+            for(let i=0; i<seq.length; i++) {
+                const ctx = seq.slice(Math.max(0, i-order), i).padStart(order, '^');
+                const row = counts.get(ctx);
+                const total = alpha.reduce((s, a) => s + (row[a]||0), 0);
+                const p = ((row[seq[i]]||0) + 0.5) / (total + 0.5 * alpha.length);
+                dataBits += -safeLog2(p);
+            }
+            const freeParams = counts.size * Math.max(1, alpha.length - 1);
+            const modelBits = freeParams * 0.5 * Math.max(1, Math.ceil(log2(seq.length)));
+            return { dataBits, modelBits, totalBits: dataBits + modelBits, contexts: counts.size };
+        };
+
+        const generateSignal = (samples = 64) => {
+            const data = [];
+            for (let i = 0; i < samples; i++) {
+                const t = i / (samples - 1);
+                const val = Math.sin(2 * Math.PI * 1.5 * t) * 0.6 + Math.sin(2 * Math.PI * 4 * t) * 0.3;
+                data.push({ index: i, val: clamp(val, -1, 1) });
+            }
+            return data;
+        };
+        const quantizeSignal = (signal, levels) => {
+            const step = 2 / (levels - 1);
+            return signal.map(p => {
+                const bucket = Math.round((p.val + 1) / step);
+                const recon = clamp(-1 + bucket * step, -1, 1);
+                return { ...p, recon };
+            });
+        };
+        const calcRateDistortion = (signal, levels) => {
+            const quantized = quantizeSignal(signal, levels);
+            const mse = quantized.reduce((sum, p) => sum + Math.pow(p.val - p.recon, 2), 0) / signal.length;
+            const step = 2 / (levels - 1);
+            const buckets = quantized.map(p => Math.round((p.val + 1) / step));
+            const counts = {};
+            buckets.forEach(b => counts[b] = (counts[b] || 0) + 1);
+            let entropy = 0;
+            Object.values(counts).forEach(c => {
+                const p = c / signal.length;
+                entropy -= p * safeLog2(p);
+            });
+            return { rate: entropy, distortion: mse, data: quantized };
+        };
+
+        const useStore = create((set, get) => ({
+            theme: localStorage.getItem('anthropic-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+            seqType: 'alternating',
+            sequence: generateSequence('alternating', 80),
+            entropyBias: 0.85,
+            quantLevels: 4,
+            rdLambda: 20,
+
+            update: (partial) => set(partial),
+            toggleTheme: () => {
+                const t = get().theme === 'dark' ? 'light' : 'dark';
+                set({ theme: t });
+                localStorage.setItem('anthropic-theme', t);
+                document.documentElement.classList.toggle('dark', t === 'dark');
+            },
+            changeSeqType: (type) => set({ seqType: type, sequence: generateSequence(type, 80) })
+        }));
+
+        const Slider = ({ label, min, max, step, value, onChange, format }) => (
+            <div className="w-full">
+                <div className="flex justify-between text-[12px] text-ant-textMuted mb-2 font-sans font-medium uppercase tracking-wide">
+                    <span>{label}</span>
+                    <span className="font-mono text-ant-text">{format ? format(value) : value}</span>
+                </div>
+                <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(parseFloat(e.target.value))} className="ant-slider" />
+            </div>
+        );
+
+        const StatBox = ({ label, value, sub, accent }) => (
+            <div className="flex flex-col">
+                <span className="text-[10px] uppercase tracking-wider text-ant-textMuted mb-1 font-semibold">{label}</span>
+                <span className={cn("text-2xl font-mono", accent ? "text-ant-accent" : "text-ant-text")}>{value}</span>
+                {sub && <span className="text-[11px] text-ant-textMuted mt-1 uppercase tracking-wide">{sub}</span>}
+            </div>
+        );
+
+        const CodingDashboard = () => {
+            const store = useStore();
+            const seq = store.sequence;
+            
+            const stats = useMemo(() => {
+                const raw = fixedWidthBits(seq);
+                const iid = iidBits(seq);
+                const rle = runLengthBits(seq);
+                const lz = lz78Bits(seq);
+                const m1 = markovCode(seq, 1).totalBits;
+                const m2 = markovCode(seq, 2).totalBits;
+                
+                return [
+                    { name: 'Raw', bits: raw, fill: 'var(--ant-text-muted)' },
+                    { name: 'IID', bits: iid, fill: 'var(--ant-chart-secondary)' },
+                    { name: 'RLE', bits: rle, fill: 'var(--ant-chart-tertiary)' },
+                    { name: 'LZ78', bits: lz, fill: 'var(--ant-chart-primary)' },
+                    { name: 'Markov(1)', bits: m1, fill: 'var(--ant-chart-secondary)' },
+                    { name: 'Markov(2)', bits: m2, fill: 'var(--ant-accent)' },
+                ];
+            }, [seq]);
+
+            return (
+                <div className="my-16 animate-enter breakout-container border-y border-ant-border py-12">
+                    <div className="flex flex-col md:flex-row gap-12 items-start mb-8">
+                        <div className="flex-1 w-full">
+                            <div className="text-[11px] text-ant-textMuted mb-3 uppercase tracking-widest font-semibold">Data Generating Process</div>
+                            <div className="flex flex-wrap gap-2">
+                                {['uniform', 'biased', 'alternating', 'markov'].map(t => (
+                                    <button 
+                                        key={t} onClick={() => store.changeSeqType(t)}
+                                        className={cn("px-4 py-2 text-[12px] font-medium rounded-full transition-colors capitalize", store.seqType === t ? "bg-ant-text text-ant-bg" : "bg-transparent text-ant-text hover:bg-ant-surface border border-ant-border")}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="mt-6 text-[11px] text-ant-textMuted mb-2 uppercase tracking-widest font-semibold">Sample (N={seq.length})</div>
+                            <div className="font-mono text-[13px] text-ant-text tracking-widest leading-relaxed break-all">{seq}</div>
+                        </div>
+                        
+                        <div className="w-full md:w-[60%] h-[280px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={stats} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                                    <CartesianGrid stroke="var(--ant-border)" vertical={false} strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" tick={{ fill: 'var(--ant-text-muted)', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} dy={10} />
+                                    <YAxis tick={{ fill: 'var(--ant-text-muted)', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+                                    <Tooltip cursor={{fill: 'var(--ant-surface)'}} contentStyle={{ backgroundColor: 'var(--ant-bg)', border: '1px solid var(--ant-border)', borderRadius: 0, boxShadow: 'none', fontFamily: 'JetBrains Mono', fontSize: 12 }} formatter={(val) => [`${val.toFixed(1)} bits`, 'Cost']} />
+                                    <Bar dataKey="bits" radius={[2, 2, 0, 0]} maxBarSize={50}>
+                                        {stats.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const EntropyDashboard = () => {
+            const store = useStore();
+            const p = store.entropyBias;
+            
+            const curve = useMemo(() => _.range(1, 100).map(i => ({ p: i / 100, entropy: entropyBinary(i / 100) })), []);
+            
+            const grid = useMemo(() => {
+                const count1 = Math.round(p * 100);
+                const arr = Array(100).fill(0).map((_, i) => i < count1 ? 1 : 0);
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }, [p]);
+
+            return (
+                <div className="my-16 animate-enter breakout-container border-y border-ant-border py-12">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                        <div className="md:col-span-1 flex flex-col justify-center space-y-12">
+                            <Slider label="Probability P(1)" min={0.01} max={0.99} step={0.01} value={p} onChange={v => store.update({ entropyBias: v })} format={v => v.toFixed(2)} />
+                            <StatBox label="Shannon Entropy" value={`${entropyBinary(p).toFixed(3)}`} sub="Bits per symbol" accent />
+                        </div>
+                        
+                        <div className="md:col-span-1 flex items-center justify-center">
+                            <div className="grid grid-cols-10 gap-[2px] w-[200px] h-[200px]">
+                                {grid.map((val, i) => (
+                                    <div key={i} className={cn("w-full h-full", val ? "bg-ant-accent" : "bg-ant-surface hover:bg-ant-border transition-colors")} />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-1 h-[200px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={curve} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                                    <XAxis dataKey="p" type="number" domain={[0, 1]} tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: 'var(--ant-text-muted)' }} axisLine={false} tickLine={false} dy={8} />
+                                    <YAxis domain={[0, 1]} tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: 'var(--ant-text-muted)' }} axisLine={false} tickLine={false} />
+                                    <ReferenceLine x={p} stroke="var(--ant-text)" strokeDasharray="2 2" />
+                                    <Area type="monotone" dataKey="entropy" stroke="var(--ant-chart-secondary)" fill="var(--ant-chart-secondary)" fillOpacity={0.15} strokeWidth={2} isAnimationActive={false} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MDLDashboard = () => {
+            const seq = useMemo(() => generateSequence('markov', 150), []); 
+            
+            const mdlData = useMemo(() => {
+                const data = [];
+                for(let order = 0; order <= 4; order++) {
+                    const res = markovCode(seq, order);
+                    data.push({
+                        order,
+                        dataBits: res.dataBits,
+                        modelBits: res.modelBits,
+                        totalBits: res.totalBits
+                    });
+                }
+                return data;
+            }, [seq]);
+
+            const bestOrder = _.minBy(mdlData, 'totalBits').order;
+
+            return (
+                <div className="my-16 animate-enter breakout-container border-y border-ant-border py-12">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+                        <div className="md:col-span-1 space-y-8 flex flex-col justify-center">
+                            <div className="text-[13px] leading-relaxed text-ant-text border-l border-ant-accent pl-4">
+                                As model complexity (Markov Order) increases, the cost to encode the data drops, but the cost to describe the model parameters rises. The optimum lies at the minimum of the sum.
+                            </div>
+                            <StatBox label="Optimal Order" value={`k = ${bestOrder}`} accent />
+                        </div>
+                        
+                        <div className="md:col-span-3 h-[320px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={mdlData} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
+                                    <CartesianGrid stroke="var(--ant-border)" vertical={false} strokeDasharray="3 3" />
+                                    <XAxis dataKey="order" tick={{ fill: 'var(--ant-text-muted)', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} dy={10} />
+                                    <YAxis tick={{ fill: 'var(--ant-text-muted)', fontSize: 11, fontFamily: 'JetBrains Mono' }} axisLine={false} tickLine={false} />
+                                    <Tooltip contentStyle={{ backgroundColor: 'var(--ant-bg)', border: '1px solid var(--ant-border)', borderRadius: 0, fontFamily: 'JetBrains Mono', fontSize: 12, boxShadow: 'none' }} />
+                                    <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'JetBrains Mono', paddingTop: '15px' }} />
+                                    <Line type="monotone" dataKey="dataBits" name="Data Cost (Fit)" stroke="var(--ant-chart-secondary)" strokeWidth={2} dot={{r:4}} />
+                                    <Line type="monotone" dataKey="modelBits" name="Model Cost (Complexity)" stroke="var(--ant-chart-tertiary)" strokeWidth={2} dot={{r:4}} />
+                                    <Line type="monotone" dataKey="totalBits" name="Total Description Length" stroke="var(--ant-accent)" strokeWidth={3} dot={{r:5}} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const RateDistortionDashboard = () => {
+            const store = useStore();
+            const signal = useMemo(() => generateSignal(64), []);
+            
+            const currentRD = useMemo(() => calcRateDistortion(signal, store.quantLevels), [signal, store.quantLevels]);
+            
+            const rdCurve = useMemo(() => {
+                const curve = [];
+                for(let k = 2; k <= 16; k++) {
+                    const res = calcRateDistortion(signal, k);
+                    curve.push({ k, rate: res.rate, distortion: res.distortion, objective: res.rate + (store.rdLambda/100) * res.distortion });
+                }
+                return curve;
+            }, [signal, store.rdLambda]);
+
+            const optimalK = _.minBy(rdCurve, 'objective').k;
+
+            return (
+                <div className="my-16 animate-enter breakout-container border-y border-ant-border py-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
+                        
+                        <div className="space-y-10">
+                            <div className="flex gap-8">
+                                <Slider label="Resolution (Levels)" min={2} max={16} step={1} value={store.quantLevels} onChange={v => store.update({ quantLevels: v })} />
+                                <Slider label="Distortion Penalty (λ)" min={0} max={100} step={1} value={store.rdLambda} onChange={v => store.update({ rdLambda: v })} />
+                            </div>
+                            
+                            <div className="h-[220px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={currentRD.data} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
+                                        <XAxis dataKey="index" tick={false} axisLine={false} />
+                                        <YAxis domain={[-1.2, 1.2]} tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: 'var(--ant-text-muted)' }} axisLine={false} tickLine={false} />
+                                        <Line type="monotone" dataKey="val" stroke="var(--ant-text-muted)" strokeWidth={1} dot={false} opacity={0.6} />
+                                        <Line type="stepAfter" dataKey="recon" stroke="var(--ant-accent)" strokeWidth={2} dot={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        <div className="space-y-8 flex flex-col">
+                            <div className="flex justify-between items-end">
+                                <StatBox label="Current Rate" value={`${currentRD.rate.toFixed(2)}b`} />
+                                <StatBox label="Distortion (MSE)" value={currentRD.distortion.toFixed(3)} />
+                                <StatBox label="Optimum Target" value={`K=${optimalK}`} accent />
+                            </div>
+
+                            <div className="h-[220px] w-full flex-1">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ScatterChart margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                        <CartesianGrid stroke="var(--ant-border)" strokeDasharray="3 3" vertical={false} />
+                                        <XAxis type="number" dataKey="distortion" name="Distortion" domain={['auto', 'auto']} tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: 'var(--ant-text-muted)' }} axisLine={false} tickLine={false} dy={8} />
+                                        <YAxis type="number" dataKey="rate" name="Rate" tick={{ fontSize: 11, fontFamily: 'JetBrains Mono', fill: 'var(--ant-text-muted)' }} axisLine={false} tickLine={false} />
+                                        <Tooltip cursor={{strokeDasharray: '3 3'}} contentStyle={{ backgroundColor: 'var(--ant-bg)', border: '1px solid var(--ant-border)', borderRadius: 0, fontFamily: 'JetBrains Mono', fontSize: 12 }} formatter={(val, name) => [val.toFixed(3), name]} />
+                                        <Scatter name="R-D Curve" data={rdCurve} fill="var(--ant-chart-secondary)" line={{ stroke: 'var(--ant-chart-secondary)', strokeWidth: 1 }} />
+                                        <Scatter name="Current" data={[{ distortion: currentRD.distortion, rate: currentRD.rate }]} fill="var(--ant-accent)" shape="circle" size={120} />
+                                    </ScatterChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        const ArticleBlock = ({ block }) => {
+            if (block.type === 'equation') return (
+                <div className="my-10 py-8 text-center font-mono border-y border-ant-border bg-ant-surface/30">
+                    <div className="text-[11px] font-sans font-semibold text-ant-textMuted mb-3 uppercase tracking-widest">{block.label}</div>
+                    <div className="text-[16px] text-ant-text">{block.text}</div>
+                </div>
+            );
+            if (block.type === 'callout') return (
+                <div className="my-10 pl-6 py-2 border-l-2 border-ant-accent bg-transparent">
+                    <div className="text-[13px] font-sans uppercase tracking-widest font-semibold text-ant-text mb-3">{block.title}</div>
+                    <p className="text-[18px] font-serif text-ant-textMuted leading-relaxed m-0 italic">{block.text}</p>
+                </div>
+            );
+            return <p className="text-[19px] md:text-[21px] font-serif text-ant-text ant-prose">{block.text}</p>;
+        };
+
+        const ArticleReader = () => {
+            const store = useStore();
+            const DASHBOARDS = {
+                'sec-regularity': CodingDashboard,
+                'sec-prob-code': EntropyDashboard,
+                'sec-mdl': MDLDashboard,
+                'sec-rate-distortion': RateDistortionDashboard
+            };
+
+            return (
+                <div className="w-full h-full overflow-y-auto no-scrollbar scroll-smooth">
+                    {/* Header Controls */}
+                    <div className="sticky top-0 z-30 w-full bg-ant-bg/90 backdrop-blur-md border-b border-ant-border py-4 px-4 sm:px-6 md:px-8 flex justify-between items-center">
+                        <div className="text-[13px] font-medium font-sans uppercase tracking-widest text-ant-text">Anthropic Research</div>
+                        <div className="flex items-center gap-5">
+                            <button onClick={store.toggleTheme} className="text-ant-textMuted hover:text-ant-text transition-colors">
+                                {store.theme === 'dark' ? <Lucide.Sun size={18} /> : <Lucide.Moon size={18} />}
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {/* Main Content Layout with Zero Horizontal Padding on the main container */}
+                    <div className="w-full pt-20 pb-32">
+                        
+                        {/* Text sections have px-4 just so text doesn't touch the glass on mobile, but uses max-w for desktop */}
+                        <div className="w-full max-w-[700px] mx-auto px-4 sm:px-6 md:px-8">
+                            <header className="mb-24">
+                                <h1 className="text-[3em] md:text-[3.8em] font-serif text-ant-text mb-6 leading-[1.1] tracking-tight">Compression is<br/>Intelligence.</h1>
+                                <p className="text-[1.4em] font-serif leading-relaxed text-ant-textMuted">
+                                    Why compact models predict, where description length becomes learning, and why compression is central without being the whole of intelligence.
+                                </p>
+                            </header>
+                        </div>
+
+                        <div className="space-y-[6em]">
+                            {ARTICLE.map(sec => {
+                                const DashboardComponent = DASHBOARDS[sec.id];
+                                return (
+                                    <section key={sec.id} id={sec.id}>
+                                        <div className="w-full max-w-[700px] mx-auto px-4 sm:px-6 md:px-8">
+                                            <h2 className="text-[1.6em] font-serif font-semibold text-ant-text mb-8 leading-tight">
+                                                {sec.title}
+                                            </h2>
+                                            <div>
+                                                {sec.blocks.map((block, index) => <ArticleBlock key={index} block={block} />)}
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Dashboards expand fully edge-to-edge naturally via breakout-container px-4 */}
+                                        {DashboardComponent && (
+                                            <div className="px-4 sm:px-6 md:px-8">
+                                                <DashboardComponent />
+                                            </div>
+                                        )}
+                                    </section>
+                                );
+                            })}
+                        </div>
+                        
+                        <footer className="w-full max-w-[700px] mx-auto px-4 sm:px-6 md:px-8 mt-[8em] border-t border-ant-border pt-[4em] flex justify-center opacity-30">
+                            <Lucide.Aperture size={24} />
+                        </footer>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<ArticleReader />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+<title id="title">Graph — spatial compression lesson</title>
+<desc id="desc">A narrow reading pane beside an infinite dotted canvas showing the lesson’s actual pattern and residual tree, sequence tiles, add-artifact toolbar, and linked note.</desc>
+<defs>
+  <pattern id="dots" width="19" height="19" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#171717"/></pattern>
+  <linearGradient id="sidebarFade" x1="0" x2="0" y1="0" y2="1"><stop offset=".72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000"/></linearGradient>
+</defs>
+<rect width="1200" height="675" fill="#040404"/>
+<rect width="338" height="675" fill="#000"/>
+<rect x="338" width="862" height="675" fill="url(#dots)"/>
+<path d="M338 0V675" stroke="#18181B"/>
+
+<!-- Reading pane -->
+<text x="30" y="72" fill="#FFF" font-family="Inter,Arial,sans-serif" font-size="25" font-weight="700" letter-spacing="-.7">Compression is</text>
+<text x="30" y="103" fill="#10B981" font-family="Inter,Arial,sans-serif" font-size="25" font-weight="700" letter-spacing="-.7">Intelligence</text>
+<rect x="30" y="124" width="271" height="28" rx="5" fill="#0B0B0B" stroke="#242424"/>
+<circle cx="45" cy="138" r="3.5" fill="#10B981"/>
+<text x="57" y="142" fill="#737373" font-family="monospace" font-size="8.5" letter-spacing=".8">UNIFIED SPATIAL SCHEMA V2.3</text>
+
+<path d="M30 195h13" stroke="#242424" stroke-width="1.5"/>
+<text x="52" y="199" fill="#F1F1F1" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="500">1. What the claim actually says</text>
+<rect x="30" y="215" width="270" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="215" width="245" height="4" rx="2" fill="#828282"/>
+<rect x="30" y="231" width="270" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="231" width="222" height="4" rx="2" fill="#828282"/>
+<rect x="30" y="247" width="259" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="247" width="209" height="4" rx="2" fill="#828282"/>
+<rect x="30" y="263" width="268" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="263" width="240" height="4" rx="2" fill="#828282"/>
+<rect x="30" y="284" width="271" height="56" rx="4" fill="#080909" stroke="#1C1C1C"/>
+<rect x="30" y="284" width="3" height="56" fill="#10B981"/>
+<text x="45" y="305" fill="#737373" font-family="monospace" font-size="8.5" letter-spacing=".7">MODEL + RESIDUAL</text>
+<text x="45" y="326" fill="#10B981" font-family="monospace" font-size="14">L(x) = L(M) + L(x | M)</text>
+
+<path d="M30 373h13" stroke="#242424" stroke-width="1.5"/>
+<text x="52" y="377" fill="#F1F1F1" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="500">2. Regularity is the source of</text>
+<text x="52" y="395" fill="#F1F1F1" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="500">compressibility</text>
+<rect x="30" y="411" width="270" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="411" width="236" height="4" rx="2" fill="#777"/>
+<rect x="30" y="427" width="270" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="427" width="220" height="4" rx="2" fill="#777"/>
+<rect x="30" y="443" width="254" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="443" width="197" height="4" rx="2" fill="#777"/>
+
+<path d="M30 481h13" stroke="#242424" stroke-width="1.5"/>
+<text x="52" y="485" fill="#F1F1F1" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="500">3. Separating rule from residual</text>
+<rect x="30" y="503" width="270" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="503" width="230" height="4" rx="2" fill="#777"/>
+<rect x="30" y="519" width="270" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="519" width="212" height="4" rx="2" fill="#777"/>
+<rect x="30" y="535" width="258" height="4" rx="2" fill="#252525"/>
+<rect x="30" y="535" width="188" height="4" rx="2" fill="#777"/>
+<rect x="0" y="604" width="338" height="71" fill="url(#sidebarFade)"/>
+
+<!-- Canvas toolbar, pinned to the upper-left of the dotted work surface -->
+<rect x="354" y="15" width="349" height="34" rx="7" fill="#0B0B0B" fill-opacity=".96" stroke="#242424"/>
+<g font-family="monospace" font-size="9.5" fill="#D7D7D7">
+  <rect x="362" y="20" width="100" height="24" rx="4" fill="#141414"/>
+  <path d="M373 27h10v10h-10zM376 24h10v10" fill="none" stroke="#10B981" stroke-width="1.2"/>
+  <text x="389" y="35">Add Note</text>
+  <rect x="465" y="20" width="108" height="24" rx="4" fill="#0B0B0B"/>
+  <rect x="476" y="27" width="10" height="10" rx="1" fill="none" stroke="#A855F7" stroke-width="1.2"/>
+  <text x="493" y="35">Add Frame</text>
+  <rect x="576" y="20" width="77" height="24" rx="4" fill="#0B0B0B"/>
+  <path d="M587 28h11v9h-11zM590 25h11v9" fill="none" stroke="#F59E0B" stroke-width="1.1"/>
+  <text x="603" y="35">Image</text>
+  <path d="M659 23v18" stroke="#242424"/>
+  <path d="M678 27a6 6 0 1 0 3 8M680 24v5h-5" fill="none" stroke="#737373" stroke-width="1.3"/>
+</g>
+
+<!-- Initial linked note artifact -->
+<path d="M480 179 Q618 157 768 231" fill="none" stroke="#10B981" stroke-width="1.5" stroke-opacity=".62"/>
+<rect x="414" y="142" width="132" height="72" rx="6" fill="#0B0B0B" stroke="#242424"/>
+<rect x="414" y="142" width="132" height="19" rx="6" fill="#121212"/>
+<path d="M414 160h132" stroke="#242424"/>
+<path d="M425 148h8v8h-8zM427 146h8v8" fill="none" stroke="#10B981" stroke-width=".8"/>
+<text x="439" y="155" fill="#D7D7D7" font-family="monospace" font-size="7.7">Core Hypotheses</text>
+<circle cx="535" cy="151" r="1.3" fill="#737373"/>
+<text x="424" y="175" fill="#737373" font-family="monospace" font-size="6.6">Information is bounded by</text>
+<text x="424" y="185" fill="#737373" font-family="monospace" font-size="6.6">model capacity. Over-parameter-</text>
+<text x="424" y="195" fill="#737373" font-family="monospace" font-size="6.6">ization inflates residual entropy.</text>
+<rect x="414" y="201" width="132" height="13" fill="#0E0E0E"/>
+<text x="420" y="210" fill="#555" font-family="monospace" font-size="5.8">Bound to: Tree Root Model</text>
+
+<!-- Active station conduits leaving the current viewport -->
+<path d="M697 229 C598 219 500 260 352 335" fill="none" stroke="#10B981" stroke-width="1.5" stroke-opacity=".5"/>
+<path d="M841 229 C942 218 1065 258 1198 330" fill="none" stroke="#10B981" stroke-width="1.5" stroke-opacity=".5"/>
+
+<!-- Root: model and residual -->
+<rect x="674" y="211" width="192" height="42" rx="5" fill="#0B0B0B" stroke="#10B981" stroke-width="1.4"/>
+<text x="770" y="229" text-anchor="middle" fill="#F1F1F1" font-family="monospace" font-size="10.5">Model M + Residual r</text>
+<text x="770" y="244" text-anchor="middle" fill="#737373" font-family="monospace" font-size="7.5">rule + exception residual</text>
+
+<!-- Pattern and exception branches -->
+<path d="M744 253 C720 268 684 271 640 284" fill="none" stroke="#10B981" stroke-width="1.4" stroke-opacity=".75"/>
+<path d="M796 253 C820 268 856 271 901 284" fill="none" stroke="#F59E0B" stroke-width="1.4" stroke-opacity=".8"/>
+<rect x="552" y="280" width="176" height="44" rx="5" fill="#0B0B0B" stroke="#242424"/>
+<rect x="552" y="280" width="29" height="44" rx="5" fill="#0A1A12"/><path d="M581 280v44" stroke="#242424"/>
+<text x="566.5" y="305" text-anchor="middle" fill="#10B981" font-family="monospace" font-size="8.5">×3</text>
+<text x="590" y="298" fill="#F1F1F1" font-family="monospace" font-size="9">Pattern: ABAC</text>
+<text x="590" y="313" fill="#737373" font-family="monospace" font-size="6.6">Low description length L(M)</text>
+
+<rect x="815" y="280" width="190" height="44" rx="5" fill="#0B0B0B" stroke="#242424"/>
+<rect x="815" y="280" width="29" height="44" rx="5" fill="#1C1409"/><path d="M844 280v44" stroke="#242424"/>
+<text x="829.5" y="305" text-anchor="middle" fill="#F59E0B" font-family="monospace" font-size="8.5">×1</text>
+<text x="853" y="298" fill="#F1F1F1" font-family="monospace" font-size="9">Exception: ABAD</text>
+<text x="853" y="313" fill="#737373" font-family="monospace" font-size="6.6">Residual exception L(x|M)</text>
+
+<!-- Repeated examples feed from the pattern model; the final sample carries the residual -->
+<g fill="none" stroke="#262626" stroke-width="1.1">
+  <path d="M600 324 C585 338 541 341 515 356"/><path d="M622 324v32"/><path d="M645 324 C661 338 701 341 727 356"/>
+  <path d="M910 324v32"/>
+  <path d="M515 390v68M621 390v68M727 390v68M919 390v68"/>
+</g>
+<path d="M910 324v32" fill="none" stroke="#F59E0B" stroke-width="1.2" stroke-opacity=".8"/>
+<g font-family="monospace" font-size="7.3" text-anchor="middle">
+  <rect x="473" y="355" width="84" height="35" rx="4" fill="#0B0B0B" stroke="#242424"/><text x="515" y="369" fill="#737373">Seq 1</text><text x="515" y="382" fill="#BDBDBD">ABAC</text>
+  <rect x="579" y="355" width="84" height="35" rx="4" fill="#0B0B0B" stroke="#242424"/><text x="621" y="369" fill="#737373">Seq 2</text><text x="621" y="382" fill="#BDBDBD">ABAC</text>
+  <rect x="685" y="355" width="84" height="35" rx="4" fill="#0B0B0B" stroke="#242424"/><text x="727" y="369" fill="#737373">Seq 3</text><text x="727" y="382" fill="#BDBDBD">ABAC</text>
+  <rect x="877" y="355" width="84" height="35" rx="4" fill="#0B0B0B" stroke="#5A3B19"/><text x="919" y="369" fill="#737373">Seq 4</text><text x="919" y="382" fill="#F59E0B">ABAD</text>
+</g>
+<g font-family="monospace" font-size="9" text-anchor="middle">
+  <g fill="#0B0B0B" stroke="#242424">
+    <rect x="504" y="458" width="22" height="25" rx="3"/><rect x="527" y="458" width="22" height="25" rx="3"/><rect x="550" y="458" width="22" height="25" rx="3"/><rect x="573" y="458" width="22" height="25" rx="3"/>
+    <rect x="610" y="458" width="22" height="25" rx="3"/><rect x="633" y="458" width="22" height="25" rx="3"/><rect x="656" y="458" width="22" height="25" rx="3"/><rect x="679" y="458" width="22" height="25" rx="3"/>
+    <rect x="716" y="458" width="22" height="25" rx="3"/><rect x="739" y="458" width="22" height="25" rx="3"/><rect x="762" y="458" width="22" height="25" rx="3"/><rect x="785" y="458" width="22" height="25" rx="3"/>
+    <rect x="908" y="458" width="22" height="25" rx="3"/><rect x="931" y="458" width="22" height="25" rx="3"/><rect x="954" y="458" width="22" height="25" rx="3"/>
+  </g>
+  <g fill="#A1A1AA"><text x="515" y="475">A</text><text x="538" y="475">B</text><text x="561" y="475">A</text><text x="584" y="475">C</text><text x="621" y="475">A</text><text x="644" y="475">B</text><text x="667" y="475">A</text><text x="690" y="475">C</text><text x="727" y="475">A</text><text x="750" y="475">B</text><text x="773" y="475">A</text><text x="796" y="475">C</text><text x="919" y="475">A</text><text x="942" y="475">B</text><text x="965" y="475">A</text></g>
+  <rect x="977" y="458" width="22" height="25" rx="3" fill="#1C1409" stroke="#6A481E"/><text x="988" y="475" fill="#F59E0B">D</text>
+</g>
+
+<!-- Seeded, off-center schema frame entering the lower-right edge -->
+<rect x="1010" y="582" width="152" height="96" rx="9" fill="#080808" fill-opacity=".8" stroke="#343434" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="1022" y="603" fill="#737373" font-family="monospace" font-size="7.2" letter-spacing=".5">ACTIVE SCHEMA BOUNDARY</text>
+<path d="M1022 612h127" stroke="#242424"/>
+<text x="1022" y="632" fill="#555" font-family="monospace" font-size="7">Temporal &amp; Predictive</text>
+<text x="1022" y="644" fill="#555" font-family="monospace" font-size="7">Integration Zone</text>
+
+<!-- Canvas navigation hint -->
+<rect x="847" y="635" width="338" height="27" rx="6" fill="#0B0B0B" fill-opacity=".94" stroke="#242424"/>
+<circle cx="864" cy="648" r="5" fill="none" stroke="#10B981" stroke-width="1"/><path d="M864 645v6m-3-3h6" stroke="#10B981" stroke-width=".8"/>
+<text x="877" y="651" fill="#737373" font-family="monospace" font-size="7.1">Pan: Drag  ·  Zoom: Wheel  ·  Add schema notes via toolbar</text>
+</svg>

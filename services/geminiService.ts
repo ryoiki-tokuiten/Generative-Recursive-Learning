@@ -1,4 +1,4 @@
-import { getInitialLessonPrompt } from "./prompts/initialLessonPrompt";
+import { DEFAULT_LESSON_TEMPLATE, getInitialLessonPrompt } from "./prompts/initialLessonPrompt";
 import { getFollowUpLessonPrompt } from "./prompts/followUpLessonPrompt";
 import { GoogleGenAI } from "@google/genai";
 
@@ -10,20 +10,21 @@ const getClient = () => {
     return new GoogleGenAI({ apiKey });
 };
 
-const MODEL_NAME = 'gemini-3.5-flash';
+const MODEL_NAME = 'gemini-3.8-flash';
 
 // gemma-4-31b-it
 // gemma-4-26b-a4b-it
 
 const CLEAN_REGEX = /```html|```/g;
 
-export const generateInitialLesson = async (topic: string): Promise<string> => {
+export const generateInitialLesson = async (
+    topic: string,
+    templateFilename: string = DEFAULT_LESSON_TEMPLATE
+): Promise<string> => {
     const ai = getClient();
 
-    const prompt = getInitialLessonPrompt(topic);
-
-
     try {
+        const prompt = await getInitialLessonPrompt(topic, templateFilename);
         const response = await ai.models.generateContent({
             model: MODEL_NAME,
             contents: prompt
@@ -39,13 +40,18 @@ export const generateInitialLesson = async (topic: string): Promise<string> => {
 export const generateFollowUpLesson = async (
     currentTopic: string,
     clickedElementHtml: string,
-    userQuestion: string
+    userQuestion: string,
+    templateFilename: string = DEFAULT_LESSON_TEMPLATE
 ): Promise<string> => {
     const ai = getClient();
 
-    const prompt = getFollowUpLessonPrompt(currentTopic, clickedElementHtml, userQuestion);
-
     try {
+        const prompt = await getFollowUpLessonPrompt(
+            currentTopic,
+            clickedElementHtml,
+            userQuestion,
+            templateFilename
+        );
         const response = await ai.models.generateContent({
             model: MODEL_NAME,
             contents: prompt,

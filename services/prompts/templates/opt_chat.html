@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reinforcement Learning: Optimal Sequential Decision-Making</title>
+
+    <!-- Theme initialization script preventing flash of unstyled theme -->
+    <script>
+        (function () {
+            const saved = localStorage.getItem('opt-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            if (saved === 'dark') document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+        })();
+    </script>
+
+    <!-- Typography: Inter, JetBrains Mono, Newsreader -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+
+    <!-- KaTeX for mathematical typesetting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <!-- Tailwind CSS with class-based dark mode -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            50: '#F8F7F4', 100: '#F1EFEA', 200: '#E4E1D9', 300: '#D1CDC4',
+                            400: '#AAA59B', 500: '#817C73', 600: '#666158', 700: '#4A4740',
+                            800: '#34322E', 900: '#252422', 950: '#1A1918'
+                        },
+                        optCanvas: 'var(--opt-canvas)',
+                        optSurface: 'var(--opt-surface)',
+                        optText: 'var(--opt-text)',
+                        optMuted: 'var(--opt-muted)',
+                        optBorder: 'var(--opt-border)',
+                        optGreen: '#16a34a',
+                        optGreenBg: '#f0fdf4',
+                        optGreenBorder: '#22c55e',
+                        optAmber: '#d97706',
+                        optYellow: '#ca8a04',
+                        optLime: '#84cc16'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        serif: ['Newsreader', 'Georgia', 'serif']
+                    }
+                }
+            }
+        };
+    </script>
+
+    <!-- React 18, Babel, and Lucide Icons -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.3.1",
+            "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.344.0"
+        }
+    }
+    </script>
+
+    <style>
+        :root {
+            color-scheme: light;
+            --opt-canvas: #f5f3ee;
+            --opt-surface: #fbfaf7;
+            --opt-text: #292723;
+            --opt-muted: #77736b;
+            --opt-border: #e4e1d9;
+            --opt-grid: rgba(90, 82, 70, 0.08);
+        }
+
+        .dark {
+            color-scheme: dark;
+            --opt-canvas: #1a1918;
+            --opt-surface: #211f1d;
+            --opt-text: #ebebe9;
+            --opt-muted: #a09d97;
+            --opt-border: #3d3c3a;
+            --opt-grid: rgba(235, 231, 223, 0.035);
+        }
+
+        body {
+            background-color: var(--opt-canvas);
+            color: var(--opt-text);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .dark body {
+            background-color: var(--opt-canvas);
+            color: var(--opt-text);
+        }
+
+        /* Keep the page canvas calm so the map and live visual carry the detail. */
+        .schematic-grid {
+            background-color: var(--opt-canvas);
+            background-image: none;
+        }
+
+        .concept-map-container { container-type: inline-size; }
+        .concept-edge { fill: none; stroke: #c8c3b9; stroke-width: 1.5; transition: stroke 0.25s ease, stroke-width 0.25s ease, opacity 0.25s ease; }
+        .dark .concept-edge { stroke: #504c46; }
+        .concept-edge.is-active { stroke: #16a34a; stroke-width: 2.2; filter: drop-shadow(0 0 4px rgba(22, 163, 74, 0.22)); }
+        .dark .concept-edge.is-active { stroke: #71b18a; filter: drop-shadow(0 0 5px rgba(113, 177, 138, 0.2)); }
+        .overview-edge { fill: none; stroke: #c8c3b9; stroke-width: 1.6; transition: stroke 0.25s ease, stroke-width 0.25s ease; }
+        .dark .overview-edge { stroke: #504c46; }
+        .overview-edge.is-active { stroke: #16a34a; stroke-width: 2.4; }
+        .dark .overview-edge.is-active { stroke: #71b18a; }
+        .concept-pillars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .concept-edge-layer { overflow: visible; }
+
+        /* Node card hover transitions */
+        .node-card {
+            transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .node-card:hover {
+            transform: translateY(-1.5px);
+            box-shadow: 0 6px 16px -3px rgba(22, 163, 74, 0.22);
+        }
+
+        /* Custom minimal scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .katex { font-size: 1.05em; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import * as Lucide from 'lucide-react';
+
+        const RL_LESSON_TREE = {
+            id: 'root',
+            title: 'Reinforcement Learning: Optimal sequential policy control under uncertainty',
+            shortTitle: 'MDP Control Root',
+            abstract: 'Reinforcement Learning formalizes optimal sequential decision-making in dynamic environments. An agent interacts with a Markov Decision Process (MDP), observing environmental state transitions and scalar feedback rewards to discover an optimal policy π* that maximizes cumulative discounted future return.',
+            math: 'J(\\pi) = \\mathbb{E}_{\\tau \\sim \\pi} \\left[ \\sum_{t=0}^{\\infty} \\gamma^t R(s_t, a_t) \\right]',
+            labId: 'gridworld',
+            children: [
+                {
+                    id: 'model-based-dp',
+                    title: 'Model-Based Planning: Value functions decompose future return via Bellman recursion',
+                    shortTitle: 'Bellman & DP',
+                    abstract: 'Rather than evaluating an entire trajectory at once, dynamic programming decomposes total expected return into the immediate reward plus the discounted value of the anticipated successor state. This recursive identity converts sequential planning into iterative local backups.',
+                    math: 'V^\\pi(s) = \\sum_{a} \\pi(a|s) \\sum_{s\', r} P(s\', r \\mid s, a) \\left[ r + \\gamma V^\\pi(s\') \\right]',
+                    labId: 'contraction',
+                    children: [
+                        {
+                            id: 'bellman-contraction',
+                            title: 'Contraction mapping guarantees geometric convergence to unique optimal values',
+                            shortTitle: 'Contraction Mapping',
+                            abstract: 'The Bellman optimality operator T* is a γ-contraction in the L∞ supremum norm. Because γ < 1, applying the operator repeatedly is guaranteed by the Banach fixed-point theorem to converge geometrically to a single unique fixed point V*, independent of initialization.',
+                            math: '\\| \\mathcal{T}^* U - \\mathcal{T}^* V \\|_\\infty \\le \\gamma \\| U - V \\|_\\infty',
+                            labId: 'contraction',
+                            leaves: [
+                                { id: 'banach-fp', label: 'Banach fixed point', note: 'Guarantees unique solution V* with zero local minima' },
+                                { id: 'geom-rate', label: 'γ geometric decay', note: 'Error shrinks by at least γ on each backup pass' },
+                                { id: 'val-iteration', label: 'value iteration', note: 'Iterative max backup over Bellman optimality operator' },
+                                { id: 'policy-iteration', label: 'policy iteration', note: 'Alternates exact policy evaluation with greedy improvement' }
+                            ]
+                        },
+                        {
+                            id: 'mdp-dynamics',
+                            title: 'The Markov property decouples future transitions from past trajectories',
+                            shortTitle: 'MDP Formulation',
+                            abstract: 'A decision process is Markovian if the conditional probability distribution of future states depends solely upon the present state and immediate action, not upon the sequence of prior events. This conditional independence property makes state spaces tractable.',
+                            math: '\\mathbb{P}(S_{t+1}=s\', R_{t+1}=r \\mid S_t=s_t, A_t=a_t, \\dots, S_0=s_0) = \\mathbb{P}(S_{t+1}=s\', R_{t+1}=r \\mid S_t, A_t)',
+                            labId: 'gridworld',
+                            leaves: [
+                                { id: 'markov-state', label: 'Markov property', note: 'History is summarized in the current state representation' },
+                                { id: 'trans-kernel', label: 'transition kernel P', note: 'P(s\' | s, a) transition dynamics distribution' },
+                                { id: 'discount-gamma', label: 'discount factor γ', note: 'Enforces finite bounds and geometric effective horizon 1/(1-γ)' },
+                                { id: 'step-reward', label: 'scalar reward R(s,a)', note: 'Immediate feedback signal driving reinforcement behavior' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'model-free-value',
+                    title: 'Model-Free Control: Temporal difference updates values from sampled transitions without transition matrices',
+                    shortTitle: 'TD & Q-Learning',
+                    abstract: 'When environmental transition dynamics P(s\'|s,a) are unknown or intractable, Temporal Difference (TD) learning replaces expectations with empirical experience. By bootstrapping from downstream value estimates, TD methods learn online without waiting for episode termination.',
+                    math: 'Q(S_t, A_t) \\leftarrow Q(S_t, A_t) + \\alpha \\left[ R_{t+1} + \\gamma \\max_a Q(S_{t+1}, a) - Q(S_t, A_t) \\right]',
+                    labId: 'cliff',
+                    children: [
+                        {
+                            id: 'td-bootstrapping',
+                            title: 'Temporal difference error drives bootstrapping from immediate experience',
+                            shortTitle: 'TD Bootstrapping',
+                            abstract: 'The 1-step TD error δ_t measures the discrepancy between the bootstrapped target and the current estimate. Bootstrapping significantly reduces sample variance compared to Monte Carlo rollouts, though it introduces temporary statistical bias.',
+                            math: '\\delta_t = R_{t+1} + \\gamma V(S_{t+1}) - V(S_t)',
+                            labId: 'cliff',
+                            leaves: [
+                                { id: 'one-step-td', label: '1-step TD error δ', note: 'Immediate temporal difference target residual' },
+                                { id: 'mc-vs-td', label: 'Monte Carlo vs TD', note: 'TD bootstraps with low variance; MC samples complete noisy returns' },
+                                { id: 'td-lambda', label: 'eligibility trace TD(λ)', note: 'Geometric bridge unifying TD(0) with full Monte Carlo rollouts' },
+                                { id: 'bias-variance-td', label: 'bootstrapping bias', note: 'Initial estimates bias updates until convergence settles' }
+                            ]
+                        },
+                        {
+                            id: 'q-learning-dqn',
+                            title: 'Off-policy Q-learning targets the optimal action-value independent of exploratory actions',
+                            shortTitle: 'Q-Learning & SARSA',
+                            abstract: 'Watkins Q-learning updates the action-value function toward the greedy maximum over next actions, decoupling the target policy from the behavior policy. In contrast, on-policy SARSA evaluates the actual exploratory action taken, leading to safer trajectories near hazards.',
+                            math: '\\delta_t^{SARSA} = R_{t+1} + \\gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t)',
+                            labId: 'cliff',
+                            leaves: [
+                                { id: 'watkins-q', label: 'Watkins Q-learning', note: 'Off-policy TD control evaluating greedy optimal actions' },
+                                { id: 'sarsa-onpolicy', label: 'SARSA on-policy', note: 'Evaluates real actions taken under the current exploration policy' },
+                                { id: 'deadly-triad', label: 'deadly triad dilemma', note: 'Instability when combining Off-Policy + Bootstrapping + Neural Nets' },
+                                { id: 'experience-replay', label: 'replay & target nets', note: 'DQN stabilization techniques breaking temporal correlations' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'policy-gradients',
+                    title: 'Policy Optimization: Policy gradients ascend the landscape of expected return directly in parameter space',
+                    shortTitle: 'Policy Gradients & PPO',
+                    abstract: 'Value-based methods struggle with continuous action spaces and near-deterministic policies. Policy gradient methods parameterize π_θ(a|s) directly and compute the analytical gradient of expected return without requiring action-value argmax operations.',
+                    math: '\\nabla_\\theta J(\\pi_\\theta) = \\mathbb{E}_{\\tau \\sim \\pi_\\theta} \\left[ \\sum_{t=0}^T \\nabla_\\theta \\log \\pi_\\theta(a_t \\mid s_t) \\, \\hat{A}(s_t, a_t) \\right]',
+                    labId: 'ppo',
+                    children: [
+                        {
+                            id: 'score-function',
+                            title: 'The score-function identity cancels unknown environmental transition derivatives',
+                            shortTitle: 'Score Function & REINFORCE',
+                            abstract: 'By exploiting ∇π = π ∇log π, environmental transition dynamics ∇P(s\'|s,a) vanish from the expectation. The policy gradient theorem proves we can compute exact gradients of real-world returns purely from sampled trajectories without requiring an environmental model.',
+                            math: '\\nabla_\\theta \\log \\pi_\\theta(a \\mid s) = \\frac{\\nabla_\\theta \\pi_\\theta(a \\mid s)}{\\pi_\\theta(a \\mid s)}',
+                            labId: 'temperature',
+                            leaves: [
+                                { id: 'log-derivative', label: 'log-derivative trick', note: 'Cancels unknown state transition dynamics ∇P' },
+                                { id: 'reinforce-algo', label: 'Williams REINFORCE', note: 'Monte Carlo policy gradient with raw episode rollouts' },
+                                { id: 'reward-to-go', label: 'causal reward-to-go', note: 'Actions cannot influence rewards received in the past' },
+                                { id: 'baseline-reduction', label: 'value baseline V(s)', note: 'Reduces gradient variance without introducing estimator bias' }
+                            ]
+                        },
+                        {
+                            id: 'trust-region-ppo',
+                            title: 'PPO clips policy probability ratios to enforce monotonic trust-region steps',
+                            shortTitle: 'PPO & Actor-Critic',
+                            abstract: 'Excessively large gradient steps in policy space cause catastrophic collapse because updated policies gather degraded trajectories. PPO stabilizes optimization by clipping probability ratios within a 1 ± ε envelope, providing pessimistic lower-bound improvement.',
+                            math: 'L^{CLIP}(\\theta) = \\hat{\\mathbb{E}}_t \\left[ \\min(r_t(\\theta)\\hat{A}_t, \\; \\text{clip}(r_t(\\theta), 1-\\epsilon, 1+\\epsilon)\\hat{A}_t) \\right]',
+                            labId: 'ppo',
+                            leaves: [
+                                { id: 'adv-func', label: 'advantage A(s,a)', note: 'Quantifies whether an action outperforms average policy value' },
+                                { id: 'gae-trace', label: 'GAE λ-discount trace', note: 'Generalized Advantage Estimator balancing TD bias against MC variance' },
+                                { id: 'ppo-clip', label: 'PPO clipped surrogate', note: 'Pessimistic bound against destructive step updates' },
+                                { id: 'entropy-bonus', label: 'entropy bonus H(π)', note: 'Prevents premature deterministic policy collapse' }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'exploration-frontiers',
+                    title: 'Exploration & Control: Balancing uncertainty resolution against reward exploitation',
+                    shortTitle: 'Bandits & Dynamics',
+                    abstract: 'An agent that only exploits current estimates can remain trapped in sub-optimal behaviors indefinitely. Rigorous exploration strategies formalize optimism in the face of uncertainty, driving sample acquisition toward ambiguous state-action regions.',
+                    math: 'A_t = \\arg\\max_a \\left[ Q_t(a) + c \\sqrt{\\frac{\\ln t}{N_t(a)}} \\right]',
+                    labId: 'bandits',
+                    children: [
+                        {
+                            id: 'multi-armed-bandits',
+                            title: 'Multi-armed bandits formalize regret minimization under pure uncertainty',
+                            shortTitle: 'Bandit Strategies',
+                            abstract: 'In stationary bandit settings, the agent balances testing unexplored arms with pulling the current empirical leader. Upper Confidence Bound (UCB) algorithms achieve asymptotically optimal logarithmic regret bounds by prioritizing actions with high epistemic variance.',
+                            math: '\\text{Regret}(T) = T \\cdot \\mu^* - \\sum_{t=1}^T \\mathbb{E}[R_t] \\le O(\\ln T)',
+                            labId: 'bandits',
+                            leaves: [
+                                { id: 'eps-greedy', label: 'ε-greedy exploration', note: 'Fixed or decaying probability of selecting random uniform actions' },
+                                { id: 'ucb1-bounds', label: 'UCB1 confidence bound', note: 'Adds epistemic uncertainty bonus c√(ln t / N(a))' },
+                                { id: 'thompson-sample', label: 'Thompson sampling', note: 'Maintains Bayesian posteriors and samples probability distributions' },
+                                { id: 'regret-minimization', label: 'logarithmic regret', note: 'Theoretical lower bound on exploration penalty' }
+                            ]
+                        },
+                        {
+                            id: 'continuous-control',
+                            title: 'Continuous dynamic environments require closed-loop feedback stabilization',
+                            shortTitle: 'Continuous Systems',
+                            abstract: 'Physical environments like the inverted pendulum require smooth continuous control policies capable of continuous state-space stabilization. Modern actor-critics output parametric Gaussian distributions to balance physical systems under perturbation.',
+                            math: 'a_t \\sim \\mathcal{N}(\\mu_\\theta(s_t), \\; \\sigma_\\theta^2(s_t))',
+                            labId: 'cartpole',
+                            leaves: [
+                                { id: 'cartpole-balance', label: 'inverted pendulum', note: 'Benchmark non-linear underactuated physical balance task' },
+                                { id: 'gaussian-policy', label: 'Gaussian policy', note: 'Continuous distribution parameterized by mean and standard deviation' },
+                                { id: 'state-stabilization', label: 'state feedback control', note: 'Closed-loop stabilization countering external physical perturbations' },
+                                { id: 'lyapunov-stability', label: 'Lyapunov stability', note: 'Mathematical guarantee of convergence to stable equilibrium' }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        const NODE_MAP = new Map();
+        const registerNodes = (node, parent = null) => {
+            NODE_MAP.set(node.id, { ...node, parentId: parent ? parent.id : null });
+            if (node.children) {
+                node.children.forEach(c => registerNodes(c, node));
+            }
+            if (node.leaves) {
+                node.leaves.forEach(l => {
+                    NODE_MAP.set(l.id, {
+                        id: l.id,
+                        title: l.label,
+                        shortTitle: l.label,
+                        abstract: l.note,
+                        parentId: node.id,
+                        labId: l.id === 'gae-trace' ? 'gae' : node.labId
+                    });
+                });
+            }
+        };
+        registerNodes(RL_LESSON_TREE);
+
+        const getPathToNode = (id) => {
+            const path = [];
+            let curr = NODE_MAP.get(id);
+            while (curr) {
+                path.unshift(curr);
+                curr = curr.parentId ? NODE_MAP.get(curr.parentId) : null;
+            }
+            return path;
+        };
+
+        const MathView = ({ math, display = false, className = '' }) => {
+            const html = useMemo(() => {
+                if (!math) return '';
+                if (typeof window.katex !== 'undefined') {
+                    try {
+                        return window.katex.renderToString(math, {
+                            throwOnError: false,
+                            displayMode: display
+                        });
+                    } catch (e) {
+                        return math;
+                    }
+                }
+                return math;
+            }, [math, display]);
+
+            return (
+                <span
+                    className={className}
+                    dangerouslySetInnerHTML={{ __html: html }}
+                />
+            );
+        };
+
+        const ConceptTree = ({ activeId, onSelect }) => {
+            const rootNode = RL_LESSON_TREE;
+            const pillars = rootNode.children;
+            const graphRef = useRef(null);
+            const [edges, setEdges] = useState([]);
+            const activePathIds = useMemo(() => new Set(getPathToNode(activeId).map(node => node.id)), [activeId]);
+
+            useLayoutEffect(() => {
+                const graph = graphRef.current;
+                if (!graph) return;
+
+                const measureEdges = () => {
+                    const bounds = graph.getBoundingClientRect();
+                    const scaleX = bounds.width / (graph.offsetWidth || bounds.width);
+                    const scaleY = bounds.height / (graph.offsetHeight || bounds.height);
+                    const nodes = new Map(Array.from(graph.querySelectorAll('[data-graph-node]'))
+                        .map(el => [el.dataset.graphNode, el]));
+                    const nextEdges = [];
+
+                    graph.querySelectorAll('[data-graph-parent]').forEach((target, index) => {
+                        const fromId = target.dataset.graphParent;
+                        const toId = target.dataset.graphNode;
+                        const source = nodes.get(fromId);
+                        if (!source || !toId) return;
+
+                        const sourceRect = source.getBoundingClientRect();
+                        const targetRect = target.getBoundingClientRect();
+                        const x1 = (sourceRect.left - bounds.left + sourceRect.width / 2) / scaleX;
+                        const y1 = (sourceRect.bottom - bounds.top) / scaleY;
+                        const x2 = (targetRect.left - bounds.left + targetRect.width / 2) / scaleX;
+                        const y2 = (targetRect.top - bounds.top) / scaleY;
+                        if (y2 <= y1) return;
+
+                        const curve = Math.max(16, (y2 - y1) * 0.48);
+                        const isLeafGroup = toId.startsWith('leaf-group-');
+                        const isActive = activePathIds.has(toId) || activeId === fromId || (isLeafGroup && activePathIds.has(fromId));
+                        nextEdges.push({
+                            key: `${fromId}-${toId}-${index}`,
+                            path: `M ${x1} ${y1} C ${x1} ${y1 + curve}, ${x2} ${y2 - curve}, ${x2} ${y2}`,
+                            x: x2,
+                            y: y2,
+                            active: isActive
+                        });
+                    });
+
+                    setEdges(nextEdges);
+                };
+
+                measureEdges();
+                const observer = new ResizeObserver(measureEdges);
+                observer.observe(graph);
+                window.addEventListener('resize', measureEdges);
+                return () => {
+                    observer.disconnect();
+                    window.removeEventListener('resize', measureEdges);
+                };
+            }, [activeId, activePathIds]);
+
+            return (
+                <div ref={graphRef} className="concept-map-container relative flex w-full flex-col items-center px-3 pb-8 pt-5 select-none sm:px-5">
+                    <svg className="concept-edge-layer pointer-events-none absolute inset-0 z-0 h-full w-full" aria-hidden="true">
+                        {edges.map(edge => (
+                            <g key={edge.key}>
+                                <path d={edge.path} className={`concept-edge${edge.active ? ' is-active' : ''}`} />
+                                <circle cx={edge.x} cy={edge.y} r="2.4" fill={edge.active ? '#16a34a' : '#a9a398'} opacity="0.85" />
+                            </g>
+                        ))}
+                    </svg>
+
+                    {/* ROOT CONCEPT */}
+                    <div className="relative z-10 w-full flex flex-col items-center">
+                        <button
+                            type="button"
+                            onClick={() => onSelect(rootNode.id)}
+                            data-graph-node={rootNode.id}
+                            className={`relative z-10 w-full bg-optSurface dark:bg-slate-900 rounded-xl p-3.5 flex items-center text-left cursor-pointer border-2 node-card ${activeId === rootNode.id ? 'border-optGreen shadow-md ring-2 ring-optGreen/20' : 'border-optBorder dark:border-slate-700 hover:border-optGreen/70'}`}
+                        >
+                            <span className="font-mono text-base sm:text-lg leading-snug font-semibold text-slate-900 dark:text-slate-100 whitespace-normal">
+                                {rootNode.title}
+                            </span>
+                        </button>
+                    </div>
+
+                    {/* PILLARS */}
+                    <div className="relative z-10 w-full pt-12">
+                        <div className="concept-pillars gap-2.5 sm:gap-3">
+                            {pillars.map((pillar) => (
+                                <div key={pillar.id} className="flex flex-col items-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => onSelect(pillar.id)}
+                                        data-graph-node={pillar.id}
+                                        data-graph-parent={rootNode.id}
+                                        className={`relative z-10 w-full bg-optSurface dark:bg-slate-900 rounded-lg p-2.5 flex flex-col items-start text-left cursor-pointer border-2 node-card ${activeId === pillar.id ? 'border-optGreen shadow-md ring-2 ring-optGreen/20' : 'border-optBorder dark:border-slate-700 hover:border-optGreen/70'}`}
+                                    >
+                                        <span className="font-mono text-xs sm:text-sm leading-snug font-semibold text-slate-900 dark:text-slate-100 break-words" title={pillar.title}>
+                                            {pillar.shortTitle}
+                                        </span>
+                                    </button>
+                                    {/* Principle nodes */}
+                                    <div className="w-full pt-7">
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            {pillar.children.map(c => (
+                                                <div key={c.id} className="flex flex-col items-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onSelect(c.id)}
+                                                        data-graph-node={c.id}
+                                                        data-graph-parent={pillar.id}
+                                                        className={`relative z-10 w-full bg-optSurface dark:bg-slate-900 rounded-lg p-1.5 flex flex-col items-start text-left cursor-pointer border-2 node-card ${activeId === c.id ? 'border-optGreen shadow-md ring-2 ring-optGreen/20' : 'border-optBorder dark:border-slate-700 hover:border-optGreen/70'}`}
+                                                    >
+                                                        <span className="font-mono text-[11px] sm:text-xs leading-snug font-semibold text-slate-900 dark:text-slate-100 break-words" title={c.title}>
+                                                            {c.shortTitle}
+                                                        </span>
+                                                    </button>
+                                                    {/* Atomic Leaves */}
+                                                    <div data-graph-node={`leaf-group-${c.id}`} data-graph-parent={c.id} className="relative z-10 mt-3 w-full flex flex-col gap-1">
+                                                        {c.leaves.map((leaf) => (
+                                                            <button
+                                                                key={leaf.id}
+                                                                type="button"
+                                                                onClick={() => onSelect(leaf.id)}
+                                                                className={`border rounded px-1.5 py-1.5 text-[10px] sm:text-[11px] leading-snug font-mono text-left break-words transition-all cursor-pointer ${activeId === leaf.id ? 'border-optGreen bg-optGreenBg dark:bg-optGreen/20 text-optGreen font-bold shadow-sm' : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-500'}`}
+                                                                title={leaf.note}
+                                                            >
+                                                                {leaf.label}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                    </div>
+                </div>
+                </div>
+            );
+        };
+
+        const OVERVIEW_PILLARS = [
+            {
+                id: 'model-based-dp',
+                index: '01',
+                title: 'Model-based planning',
+                summary: 'Use a model of the world to compare futures before acting.',
+                visual: 'model',
+                topics: [
+                    { id: 'mdp-dynamics', label: 'MDP states & transitions' },
+                    { id: 'bellman-contraction', label: 'Bellman backups' }
+                ]
+            },
+            {
+                id: 'model-free-value',
+                index: '02',
+                title: 'Value-based learning',
+                summary: 'Learn which actions lead to better long-term returns.',
+                visual: 'value',
+                topics: [
+                    { id: 'td-bootstrapping', label: 'Temporal difference' },
+                    { id: 'q-learning-dqn', label: 'Q-learning & SARSA' }
+                ]
+            },
+            {
+                id: 'policy-gradients',
+                index: '03',
+                title: 'Policy optimization',
+                summary: 'Improve the action-selection policy directly from experience.',
+                visual: 'policy',
+                topics: [
+                    { id: 'score-function', label: 'REINFORCE' },
+                    { id: 'trust-region-ppo', label: 'PPO & Actor-Critic' },
+                    { id: 'gae-trace', label: 'Advantage estimates' }
+                ]
+            },
+            {
+                id: 'exploration-frontiers',
+                index: '04',
+                title: 'Exploration & control',
+                summary: 'Trade off known rewards against uncertain actions and dynamics.',
+                visual: 'exploration',
+                topics: [
+                    { id: 'multi-armed-bandits', label: 'Bandit strategies' },
+                    { id: 'eps-greedy', label: 'ε-greedy & UCB' },
+                    { id: 'continuous-control', label: 'Continuous control' }
+                ]
+            }
+        ];
+
+        const OverviewVisual = ({ type }) => {
+            const common = 'h-[70px] w-full text-slate-400 dark:text-slate-500';
+            if (type === 'model') return (
+                <svg viewBox="0 0 280 70" className={common} fill="none" aria-hidden="true">
+                    <path d="M47 37 C78 4 104 4 133 35 S190 65 222 34" stroke="currentColor" strokeWidth="1.6" strokeDasharray="4 5" />
+                    <path d="M211 31l11 3-7 9" stroke="#16a34a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                    {[{x:35,label:'sₜ'},{x:140,label:'sₜ₊₁'},{x:244,label:'sₜ₊₂'}].map(node => (
+                        <g key={node.label}>
+                            <circle cx={node.x} cy="36" r="18" fill="var(--opt-surface)" stroke="currentColor" strokeWidth="1.5" />
+                            <text x={node.x} y="40" textAnchor="middle" fill="var(--opt-text)" fontSize="11" fontFamily="monospace">{node.label}</text>
+                        </g>
+                    ))}
+                    <circle cx="88" cy="18" r="3" fill="#16a34a" /><text x="97" y="21" fill="var(--opt-muted)" fontSize="9">rₜ₊₁</text>
+                </svg>
+            );
+            if (type === 'value') return (
+                <svg viewBox="0 0 280 70" className={common} fill="none" aria-hidden="true">
+                    <path d="M22 56H258" stroke="currentColor" strokeWidth="1.3" />
+                    {[{x:54,h:22},{x:99,h:39},{x:144,h:29},{x:189,h:52},{x:234,h:34}].map((bar, i) => (
+                        <g key={bar.x}>
+                            <rect x={bar.x - 10} y={56 - bar.h} width="20" height={bar.h} rx="4" fill={i === 3 ? '#16a34a' : 'currentColor'} opacity={i === 3 ? '0.9' : '0.48'} />
+                            <text x={bar.x} y="68" textAnchor="middle" fill="var(--opt-muted)" fontSize="8" fontFamily="monospace">a{i + 1}</text>
+                        </g>
+                    ))}
+                    <path d="M188 12v9m-4-4 4 4 4-4" stroke="#16a34a" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                    <text x="204" y="17" fill="var(--opt-muted)" fontSize="9" fontFamily="monospace">Q(s,a)</text>
+                </svg>
+            );
+            if (type === 'policy') return (
+                <svg viewBox="0 0 280 70" className={common} fill="none" aria-hidden="true">
+                    <path d="M25 55 C65 54 70 17 111 22 C151 27 151 48 185 37 C210 29 219 14 253 13" stroke="currentColor" strokeWidth="2" />
+                    <path d="M244 9l10 4-8 7" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    {[{x:57,y:45},{x:112,y:22},{x:169,y:41},{x:221,y:20}].map((dot, i) => (
+                        <circle key={dot.x} cx={dot.x} cy={dot.y} r={i === 3 ? 5 : 3.5} fill={i === 3 ? '#16a34a' : 'var(--opt-surface)'} stroke={i === 3 ? '#16a34a' : 'currentColor'} strokeWidth="1.5" />
+                    ))}
+                    <text x="27" y="68" fill="var(--opt-muted)" fontSize="9" fontFamily="monospace">θ</text>
+                    <text x="232" y="62" fill="var(--opt-muted)" fontSize="9" fontFamily="monospace">J(πθ)</text>
+                    <path d="M68 58l31-24" stroke="#16a34a" strokeWidth="1.2" strokeDasharray="3 3" />
+                </svg>
+            );
+            return (
+                <svg viewBox="0 0 280 70" className={common} fill="none" aria-hidden="true">
+                    <path d="M25 57H255" stroke="currentColor" strokeWidth="1.3" />
+                    {[{x:60,h:23},{x:112,h:40},{x:164,h:29},{x:216,h:47}].map((arm, i) => (
+                        <g key={arm.x}>
+                            <path d={`M${arm.x} 56V${56-arm.h}`} stroke={i === 1 ? '#16a34a' : 'currentColor'} strokeWidth="2" strokeLinecap="round" />
+                            <path d={`M${arm.x-7} ${56-arm.h}H${arm.x+7}`} stroke={i === 1 ? '#16a34a' : 'currentColor'} strokeWidth="1.5" strokeLinecap="round" />
+                            <circle cx={arm.x} cy={56-arm.h} r="4" fill={i === 1 ? '#16a34a' : 'var(--opt-surface)'} stroke={i === 1 ? '#16a34a' : 'currentColor'} strokeWidth="1.5" />
+                            <text x={arm.x} y="68" textAnchor="middle" fill="var(--opt-muted)" fontSize="8" fontFamily="monospace">a{i + 1}</text>
+                        </g>
+                    ))}
+                    <path d="M112 9v7m-5-2 5-5 5 5" stroke="#16a34a" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    <text x="126" y="14" fill="var(--opt-muted)" fontSize="9" fontFamily="monospace">uncertainty</text>
+                </svg>
+            );
+        };
+
+        const ReinforcementOverviewMap = ({ activeId, onSelect }) => {
+            const graphRef = useRef(null);
+            const [edges, setEdges] = useState([]);
+            const activePathIds = useMemo(() => new Set(getPathToNode(activeId).map(node => node.id)), [activeId]);
+            const loop = [
+                { id: 'root', phase: 'AGENT', label: 'Policy', detail: 'choose action' },
+                { id: 'policy-gradients', phase: 'ACTION', label: 'Action', detail: 'aₜ ~ π(a|s)' },
+                { id: 'mdp-dynamics', phase: 'ENVIRONMENT', label: 'Environment', detail: 'transition' },
+                { id: 'mdp-dynamics', phase: 'FEEDBACK', label: 'State + reward', detail: 'sₜ₊₁, rₜ₊₁' },
+                { id: 'td-bootstrapping', phase: 'LEARNING', label: 'Policy update', detail: 'improve π' }
+            ];
+
+            useLayoutEffect(() => {
+                const graph = graphRef.current;
+                if (!graph) return;
+
+                const measureEdges = () => {
+                    const bounds = graph.getBoundingClientRect();
+                    const scaleX = bounds.width / (graph.offsetWidth || bounds.width);
+                    const scaleY = bounds.height / (graph.offsetHeight || bounds.height);
+                    const anchors = new Map(Array.from(graph.querySelectorAll('[data-overview-anchor]'))
+                        .map(el => [el.dataset.overviewAnchor, el]));
+                    const nextEdges = [];
+
+                    graph.querySelectorAll('[data-overview-parent]').forEach((target, index) => {
+                        const fromId = target.dataset.overviewParent;
+                        const toId = target.dataset.overviewTarget;
+                        const source = anchors.get(fromId);
+                        if (!source || !toId) return;
+                        const sourceRect = source.getBoundingClientRect();
+                        const targetRect = target.getBoundingClientRect();
+                        const x1 = (sourceRect.left - bounds.left + sourceRect.width / 2) / scaleX;
+                        const y1 = (sourceRect.bottom - bounds.top) / scaleY;
+                        const x2 = (targetRect.left - bounds.left + targetRect.width / 2) / scaleX;
+                        const y2 = (targetRect.top - bounds.top) / scaleY;
+                        if (y2 <= y1) return;
+                        const curve = Math.max(20, (y2 - y1) * 0.5);
+                        const active = toId === 'loop' ? activeId === 'root' : activePathIds.has(toId);
+                        nextEdges.push({
+                            key: `${fromId}-${toId}-${index}`,
+                            path: `M ${x1} ${y1} C ${x1} ${y1 + curve}, ${x2} ${y2 - curve}, ${x2} ${y2}`,
+                            x: x2,
+                            y: y2,
+                            active
+                        });
+                    });
+                    setEdges(nextEdges);
+                };
+
+                measureEdges();
+                const observer = new ResizeObserver(measureEdges);
+                observer.observe(graph);
+                window.addEventListener('resize', measureEdges);
+                return () => {
+                    observer.disconnect();
+                    window.removeEventListener('resize', measureEdges);
+                };
+            }, [activeId, activePathIds]);
+
+            const selectedClass = (id) => activeId === id
+                ? 'border-optGreen shadow-sm ring-2 ring-optGreen/15'
+                : 'border-optBorder hover:border-optGreen/60';
+
+            return (
+                <div ref={graphRef} className="relative w-full select-none px-2 pb-8 pt-3 sm:px-3">
+                    <svg className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible" aria-hidden="true">
+                        {edges.map(edge => (
+                            <g key={edge.key}>
+                                <path d={edge.path} className={`overview-edge${edge.active ? ' is-active' : ''}`} />
+                                <circle cx={edge.x} cy={edge.y} r="2.5" fill={edge.active ? '#16a34a' : '#a9a398'} opacity="0.82" />
+                            </g>
+                        ))}
+                    </svg>
+
+                    <button
+                        type="button"
+                        data-overview-anchor="root"
+                        data-overview-node="root"
+                        onClick={() => onSelect('root')}
+                        className={`relative z-10 flex w-full items-center gap-3 rounded-xl border bg-optSurface px-4 py-3 text-left transition-all ${selectedClass('root')}`}
+                    >
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-optCanvas text-optGreen">
+                            <Lucide.GitBranch size={19} strokeWidth={1.8} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                            <span className="block text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Reinforcement learning</span>
+                            <span className="mt-0.5 block text-sm font-semibold text-slate-900 dark:text-slate-100">Learn a policy by acting, observing outcomes, and improving from reward</span>
+                        </span>
+                        <span className="hidden shrink-0 rounded-md border border-optBorder px-2 py-1 font-mono text-[10px] text-slate-500 sm:inline-flex">THE WHOLE FIELD</span>
+                    </button>
+
+                    <div
+                        data-overview-anchor="loop"
+                        data-overview-parent="root"
+                        data-overview-target="loop"
+                        className="relative z-10 mt-8 rounded-xl border border-optBorder bg-optSurface/90 p-3 sm:p-4"
+                    >
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                            <div>
+                                <p className="text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">The interaction loop</p>
+                                <p className="mt-0.5 text-xs text-slate-700 dark:text-slate-300">Learning happens through this repeated exchange.</p>
+                            </div>
+                            <Lucide.RefreshCw size={16} className="shrink-0 text-optGreen" strokeWidth={1.8} />
+                        </div>
+                        <div className="flex items-stretch gap-1 sm:gap-2">
+                            {loop.map((step, index) => (
+                                <React.Fragment key={`${step.phase}-${index}`}>
+                                    <button
+                                        type="button"
+                                        data-overview-node={step.id}
+                                        onClick={() => onSelect(step.id)}
+                                        className={`min-w-0 flex-1 rounded-lg border px-1.5 py-2 text-center transition-colors sm:px-2 ${selectedClass(step.id)} bg-optCanvas`}
+                                    >
+                                        <span className="block truncate text-[8px] font-mono font-semibold tracking-[0.08em] text-slate-500 dark:text-slate-400 sm:text-[9px]">{step.phase}</span>
+                                        <span className="mt-1 block text-[10px] font-semibold leading-tight text-slate-900 dark:text-slate-100 sm:text-xs">{step.label}</span>
+                                        <span className="mt-1 block truncate text-[8px] font-mono text-slate-500 dark:text-slate-400 sm:text-[9px]">{step.detail}</span>
+                                    </button>
+                                    {index < loop.length - 1 && <Lucide.ChevronRight size={13} className="my-auto shrink-0 text-optGreen" aria-hidden="true" />}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                        <div className="relative mx-2 mt-1 h-7" aria-hidden="true">
+                            <svg viewBox="0 0 700 28" className="absolute inset-0 h-full w-full overflow-visible">
+                                <path d="M 688 2 C 688 26, 12 26, 12 2" fill="none" stroke="#a9a398" strokeWidth="1.3" />
+                                <path d="M 7 9 L 12 2 L 17 9" fill="none" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <span className="absolute left-1/2 top-3 -translate-x-1/2 bg-optSurface px-2 text-[8px] font-mono text-slate-500 dark:text-slate-400">repeat with the updated policy</span>
+                        </div>
+                        <div className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-optCanvas/80 px-3 py-2 text-center">
+                            <Lucide.Target size={14} className="shrink-0 text-optGreen" />
+                            <span className="text-[10px] font-mono text-slate-600 dark:text-slate-300 sm:text-xs">Objective</span>
+                            <span className="text-slate-400">·</span>
+                            <span className="text-xs font-medium text-slate-800 dark:text-slate-200"><MathView math={'J(\\pi)=\\mathbb{E}[\\sum_t \\gamma^t r_t]'} /></span>
+                            <span className="hidden text-[10px] text-slate-500 dark:text-slate-400 sm:inline">maximize expected discounted return</span>
+                        </div>
+                    </div>
+
+                    <div className="relative z-10 mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {OVERVIEW_PILLARS.map(pillar => {
+                            const pathActive = activePathIds.has(pillar.id);
+                            return (
+                                <article
+                                    key={pillar.id}
+                                    data-overview-parent="loop"
+                                    data-overview-target={pillar.id}
+                                    className={`rounded-xl border bg-optSurface p-3 transition-colors ${pathActive ? 'border-optGreen/70' : 'border-optBorder'}`}
+                                >
+                                    <button
+                                        type="button"
+                                        data-overview-anchor={pillar.id}
+                                        data-overview-node={pillar.id}
+                                        onClick={() => onSelect(pillar.id)}
+                                        className={`w-full rounded-lg border bg-optCanvas p-2.5 text-left transition-all ${selectedClass(pillar.id)}`}
+                                    >
+                                        <span className="flex items-start justify-between gap-2">
+                                            <span>
+                                                <span className="block text-[9px] font-mono font-semibold tracking-[0.12em] text-slate-500 dark:text-slate-400">{pillar.index} / LEARNING SYSTEM</span>
+                                                <span className="mt-1 block text-sm font-semibold text-slate-900 dark:text-slate-100">{pillar.title}</span>
+                                            </span>
+                                            <Lucide.ArrowUpRight size={15} className="mt-0.5 shrink-0 text-optGreen" />
+                                        </span>
+                                        <span className="mt-1 block min-h-[2.25rem] text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{pillar.summary}</span>
+                                        <span className="mt-1.5 block rounded-md bg-optSurface px-2 py-1">
+                                            <OverviewVisual type={pillar.visual} />
+                                        </span>
+                                    </button>
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {pillar.topics.map(topic => (
+                                            <button
+                                                key={topic.id}
+                                                type="button"
+                                                data-overview-node={topic.id}
+                                                onClick={() => onSelect(topic.id)}
+                                                className={`rounded-md border px-2 py-1 text-left text-[9px] font-mono leading-tight transition-colors sm:text-[10px] ${activePathIds.has(topic.id) ? 'border-optGreen/70 text-optGreen' : 'border-optBorder text-slate-600 hover:border-optGreen/60 hover:text-optGreen dark:text-slate-300'}`}
+                                            >
+                                                {topic.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+                    <div className="relative z-10 mt-4 flex items-center justify-between border-t border-optBorder pt-3 text-[9px] font-mono text-slate-500 dark:text-slate-400">
+                        <span>Interaction → learning signal → policy improvement</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const ConceptMapExplorer = ({ activeId, onSelect }) => {
+            const viewportRef = useRef(null);
+            const detailRef = useRef(null);
+            const overviewRef = useRef(null);
+            const dragRef = useRef(null);
+            const activeMapRef = useRef('detail');
+            const [activeMap, setActiveMap] = useState('detail');
+            const [camera, setCamera] = useState({ x: 24, y: 20, zoom: 1 });
+            const [worldHeight, setWorldHeight] = useState(900);
+            const [isPanning, setIsPanning] = useState(false);
+
+            const focusMap = (map = activeMap) => {
+                const viewport = viewportRef.current;
+                const target = map === 'detail' ? detailRef.current : overviewRef.current;
+                if (!viewport || !target) return;
+                const width = target.offsetWidth || 1000;
+                const height = target.offsetHeight || 640;
+                const controlsHeight = 60;
+                const availableHeight = Math.max(220, viewport.clientHeight - controlsHeight - 20);
+                const zoom = Math.min(1.08, (viewport.clientWidth - 36) / width, availableHeight / height);
+                const safeZoom = Math.max(0.36, zoom);
+                const centerX = target.offsetLeft + width / 2;
+                const centerY = target.offsetTop + height / 2;
+                setCamera({
+                    x: viewport.clientWidth / 2 - centerX * safeZoom,
+                    y: controlsHeight + availableHeight / 2 - centerY * safeZoom,
+                    zoom: safeZoom
+                });
+            };
+
+            const zoomAt = (factor, point) => {
+                const viewport = viewportRef.current;
+                if (!viewport) return;
+                const bounds = viewport.getBoundingClientRect();
+                const focusX = point ? point.x - bounds.left : viewport.clientWidth / 2;
+                const focusY = point ? point.y - bounds.top : viewport.clientHeight / 2;
+                setCamera(current => {
+                    const zoom = Math.max(0.36, Math.min(1.55, current.zoom * factor));
+                    const worldX = (focusX - current.x) / current.zoom;
+                    const worldY = (focusY - current.y) / current.zoom;
+                    return { x: focusX - worldX * zoom, y: focusY - worldY * zoom, zoom };
+                });
+            };
+
+            const selectOnMap = (map, id) => {
+                activeMapRef.current = map;
+                setActiveMap(map);
+                onSelect(id);
+            };
+
+            const focusVisibleMapOnKeyboard = (map) => {
+                activeMapRef.current = map;
+                setActiveMap(map);
+                const viewport = viewportRef.current;
+                const target = map === 'detail' ? detailRef.current : overviewRef.current;
+                if (!viewport || !target) return;
+                const view = viewport.getBoundingClientRect();
+                const bounds = target.getBoundingClientRect();
+                if (bounds.right < view.left || bounds.left > view.right || bounds.bottom < view.top || bounds.top > view.bottom) {
+                    focusMap(map);
+                }
+            };
+
+            useLayoutEffect(() => {
+                const detail = detailRef.current;
+                const overview = overviewRef.current;
+                const viewport = viewportRef.current;
+                if (!detail || !overview || !viewport) return;
+                const updateWorldHeight = () => {
+                    const nextHeight = Math.max(detail.offsetHeight, overview.offsetHeight, 600) + 120;
+                    setWorldHeight(current => current === nextHeight ? current : nextHeight);
+                };
+                updateWorldHeight();
+                const mapObserver = new ResizeObserver(updateWorldHeight);
+                mapObserver.observe(detail);
+                mapObserver.observe(overview);
+                const viewportObserver = new ResizeObserver(() => focusMap(activeMapRef.current));
+                viewportObserver.observe(viewport);
+                const frame = requestAnimationFrame(() => focusMap('detail'));
+                return () => {
+                    cancelAnimationFrame(frame);
+                    mapObserver.disconnect();
+                    viewportObserver.disconnect();
+                };
+            }, []);
+
+            const handlePointerDown = (event) => {
+                if (event.button !== 0 || event.target.closest('button,[data-map-ui]')) return;
+                dragRef.current = { x: event.clientX, y: event.clientY, camera, moved: false };
+                event.currentTarget.setPointerCapture(event.pointerId);
+            };
+
+            const handlePointerMove = (event) => {
+                if (!dragRef.current) return;
+                const dx = event.clientX - dragRef.current.x;
+                const dy = event.clientY - dragRef.current.y;
+                if (!dragRef.current.moved && Math.hypot(dx, dy) < 3) return;
+                dragRef.current.moved = true;
+                setIsPanning(true);
+                setCamera({ ...dragRef.current.camera, x: dragRef.current.camera.x + dx, y: dragRef.current.camera.y + dy });
+            };
+
+            const stopPanning = (event) => {
+                if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+                dragRef.current = null;
+                setIsPanning(false);
+            };
+
+            const handleKeyDown = (event) => {
+                if (event.target !== viewportRef.current) return;
+                if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    const shifts = { ArrowLeft: [56, 0], ArrowRight: [-56, 0], ArrowUp: [0, 56], ArrowDown: [0, -56] };
+                    const [x, y] = shifts[event.key];
+                    setCamera(current => ({ ...current, x: current.x + x, y: current.y + y }));
+                } else if (event.key === '+' || event.key === '=') {
+                    event.preventDefault(); zoomAt(1.15);
+                } else if (event.key === '-') {
+                    event.preventDefault(); zoomAt(0.87);
+                } else if (event.key === 'Home') {
+                    event.preventDefault(); focusMap(activeMap);
+                }
+            };
+
+            return (
+                <div className="flex min-h-0 flex-1 flex-col">
+                    <div
+                        ref={viewportRef}
+                        id="concept-map-canvas"
+                        role="region"
+                        tabIndex={0}
+                        aria-label="Pannable reinforcement learning concept maps"
+                        aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown + - Home"
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={stopPanning}
+                        onPointerCancel={stopPanning}
+                        onWheel={(event) => {
+                            event.preventDefault();
+                            zoomAt(Math.exp(-event.deltaY * 0.0012), { x: event.clientX, y: event.clientY });
+                        }}
+                        onKeyDown={handleKeyDown}
+                        className={`relative min-h-[500px] flex-1 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-optGreen sm:min-h-[560px] xl:min-h-0 ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+                        style={{ touchAction: 'none' }}
+                    >
+                        <div data-map-ui className="absolute right-3 top-3 z-30 flex items-center gap-1 rounded-lg border border-optBorder bg-optSurface/90 p-1 shadow-sm backdrop-blur-sm sm:right-4 sm:top-4">
+                            <div role="group" className="flex items-center gap-0.5 border-r border-optBorder pr-1" aria-label="Choose a concept map">
+                                <button type="button" aria-label="Show detailed concept map" aria-pressed={activeMap === 'detail'} onClick={() => { activeMapRef.current = 'detail'; setActiveMap('detail'); focusMap('detail'); }} className={`grid h-8 w-8 place-items-center rounded-md transition-colors ${activeMap === 'detail' ? 'bg-optCanvas text-optGreen' : 'text-slate-500 hover:bg-optCanvas hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}><Lucide.GitFork size={15} /></button>
+                                <button type="button" aria-label="Show reinforcement learning overview" aria-pressed={activeMap === 'overview'} onClick={() => { activeMapRef.current = 'overview'; setActiveMap('overview'); focusMap('overview'); }} className={`grid h-8 w-8 place-items-center rounded-md transition-colors ${activeMap === 'overview' ? 'bg-optCanvas text-optGreen' : 'text-slate-500 hover:bg-optCanvas hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}`}><Lucide.LayoutGrid size={15} /></button>
+                            </div>
+                            <div role="group" className="flex items-center gap-0.5" aria-label="Concept map zoom controls">
+                                <button type="button" aria-label="Zoom out" title="Zoom out" onClick={() => zoomAt(0.85)} className="grid h-8 w-8 place-items-center rounded-md text-slate-600 transition-colors hover:bg-optCanvas hover:text-optGreen dark:text-slate-300"><Lucide.Minus size={15} /></button>
+                                <span className="w-10 text-center font-mono text-[10px] tabular-nums text-slate-500 dark:text-slate-400" aria-live="polite">{Math.round(camera.zoom * 100)}%</span>
+                                <button type="button" aria-label="Zoom in" title="Zoom in" onClick={() => zoomAt(1.18)} className="grid h-8 w-8 place-items-center rounded-md text-slate-600 transition-colors hover:bg-optCanvas hover:text-optGreen dark:text-slate-300"><Lucide.Plus size={15} /></button>
+                                <button type="button" aria-label="Center active map" title="Center active map" onClick={() => focusMap(activeMap)} className="ml-0.5 grid h-8 w-8 place-items-center rounded-md text-slate-600 transition-colors hover:bg-optCanvas hover:text-optGreen dark:text-slate-300"><Lucide.Focus size={15} /></button>
+                            </div>
+                        </div>
+                        <div data-map-ui className="pointer-events-none absolute bottom-3 left-3 z-30 rounded-md border border-optBorder/70 bg-optSurface/80 px-2 py-1 text-[9px] font-mono text-slate-500 shadow-sm backdrop-blur-sm dark:text-slate-400 sm:bottom-4 sm:left-4">
+                            Drag to pan · Scroll to zoom · Arrow keys, + / −, Home
+                        </div>
+                        <div
+                            className="absolute left-0 top-0"
+                            style={{
+                                width: '2104px',
+                                height: `${worldHeight}px`,
+                                transform: `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.zoom})`,
+                                transformOrigin: 'top left',
+                                transition: isPanning ? 'none' : 'transform 160ms ease-out'
+                            }}
+                        >
+                            <div
+                                ref={detailRef}
+                                onFocusCapture={() => focusVisibleMapOnKeyboard('detail')}
+                                className="absolute left-6 top-16 w-[1000px]"
+                            >
+                                <ConceptTree activeId={activeId} onSelect={(id) => selectOnMap('detail', id)} />
+                            </div>
+                            <div
+                                ref={overviewRef}
+                                onFocusCapture={() => focusVisibleMapOnKeyboard('overview')}
+                                className="absolute left-[1080px] top-16 w-[1000px]"
+                            >
+                                <ReinforcementOverviewMap activeId={activeId} onSelect={(id) => selectOnMap('overview', id)} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabGridWorld = () => {
+            const [gamma, setGamma] = useState(0.90);
+            const [slipProb, setSlipProb] = useState(0.10);
+            const [stepCost, setStepCost] = useState(-0.04);
+            const [iteration, setIteration] = useState(0);
+
+            const [V, setV] = useState([
+                [0, 0, 0, 0],
+                [0, null, 0, -10],
+                [0, 0, 0, 0],
+                [0, 0, 0, 10]
+            ]);
+
+            const actions = [
+                { name: 'U', dr: -1, dc: 0 },
+                { name: 'R', dr: 0, dc: 1 },
+                { name: 'D', dr: 1, dc: 0 },
+                { name: 'L', dr: 0, dc: -1 }
+            ];
+
+            const stepValueIteration = () => {
+                setV(prev => {
+                    const next = prev.map(row => [...row]);
+                    for (let r = 0; r < 4; r++) {
+                        for (let c = 0; c < 4; c++) {
+                            if ((r === 3 && c === 3) || (r === 1 && c === 3) || (r === 1 && c === 1)) {
+                                continue;
+                            }
+                            let maxQ = -Infinity;
+                            actions.forEach((a, aIdx) => {
+                                let expectedQ = 0;
+                                const outcomes = [
+                                    { act: a, p: 1 - 2 * slipProb },
+                                    { act: actions[(aIdx + 3) % 4], p: slipProb },
+                                    { act: actions[(aIdx + 1) % 4], p: slipProb }
+                                ];
+                                outcomes.forEach(o => {
+                                    let nr = r + o.act.dr;
+                                    let nc = c + o.act.dc;
+                                    if (nr < 0 || nr >= 4 || nc < 0 || nc >= 4 || (nr === 1 && nc === 1)) {
+                                        nr = r;
+                                        nc = c;
+                                    }
+                                    const nextVal = (nr === 3 && nc === 3) ? 10 : ((nr === 1 && nc === 3) ? -10 : (prev[nr][nc] || 0));
+                                    expectedQ += o.p * (stepCost + gamma * nextVal);
+                                });
+                                if (expectedQ > maxQ) maxQ = expectedQ;
+                            });
+                            next[r][c] = maxQ;
+                        }
+                    }
+                    return next;
+                });
+                setIteration(i => i + 1);
+            };
+
+            const resetGrid = () => {
+                setV([
+                    [0, 0, 0, 0],
+                    [0, null, 0, -10],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 10]
+                ]);
+                setIteration(0);
+            };
+
+            const autoConverge = () => {
+                for (let k = 0; k < 25; k++) {
+                    stepValueIteration();
+                }
+            };
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div>
+                            <h4 className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 uppercase">
+                                GridWorld Value Iteration & Dynamic Programming
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-serif">
+                                Exact Bellman optimality backups over continuous state transitions
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={stepValueIteration}
+                                className="px-2.5 py-1 text-xs font-mono bg-optGreen text-white rounded font-bold hover:bg-optGreen/90 transition-colors"
+                            >
+                                Step Backup
+                            </button>
+                            <button
+                                onClick={autoConverge}
+                                className="px-2.5 py-1 text-xs font-mono bg-slate-800 dark:bg-slate-700 text-white rounded font-bold hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                Converge (×25)
+                            </button>
+                            <button
+                                onClick={resetGrid}
+                                className="px-2 py-1 text-xs font-mono border border-slate-300 dark:border-slate-700 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-3">
+                            <div>
+                                <div className="flex justify-between text-xs font-mono text-slate-600 dark:text-slate-400">
+                                    <span>Discount (γ):</span>
+                                    <strong className="text-slate-900 dark:text-slate-200">{gamma.toFixed(2)}</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="0.99"
+                                    step="0.01"
+                                    value={gamma}
+                                    onChange={e => setGamma(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-xs font-mono text-slate-600 dark:text-slate-400">
+                                    <span>Stochastic Slip Probability:</span>
+                                    <strong className="text-slate-900 dark:text-slate-200">{(slipProb * 100).toFixed(0)}%</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.0"
+                                    max="0.3"
+                                    step="0.02"
+                                    value={slipProb}
+                                    onChange={e => setSlipProb(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-1">
+                                <div className="text-slate-500 dark:text-slate-400">Iteration Count: <strong className="text-optGreen">{iteration}</strong></div>
+                                <div className="text-slate-500 dark:text-slate-400">Goal State: <strong className="text-optGreen">+10.0 Reward</strong></div>
+                                <div className="text-slate-500 dark:text-slate-400">Pit Hazard: <strong className="text-red-500">-10.0 Penalty</strong></div>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 flex justify-center">
+                            <div className="grid grid-cols-4 gap-2 w-full max-w-sm aspect-square p-2 bg-slate-100 dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800">
+                                {V.map((row, r) =>
+                                    row.map((val, c) => {
+                                        const isGoal = r === 3 && c === 3;
+                                        const isPit = r === 1 && c === 3;
+                                        const isWall = r === 1 && c === 1;
+
+                                        let bgColor = 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800';
+                                        if (isGoal) bgColor = 'bg-emerald-100 dark:bg-emerald-950/60 border-emerald-400 dark:border-emerald-600 text-emerald-800 dark:text-emerald-300';
+                                        else if (isPit) bgColor = 'bg-red-100 dark:bg-red-950/60 border-red-400 dark:border-red-600 text-red-800 dark:text-red-300';
+                                        else if (isWall) bgColor = 'bg-slate-400 dark:bg-slate-700 border-slate-500 dark:border-slate-600';
+                                        else if (val > 0) bgColor = 'bg-emerald-50 dark:bg-emerald-950/30 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-800';
+
+                                        return (
+                                            <div
+                                                key={`${r}-${c}`}
+                                                className={`border rounded flex flex-col items-center justify-center p-1 transition-all ${bgColor}`}
+                                            >
+                                                {isWall ? (
+                                                    <span className="text-[10px] font-mono text-white font-bold">WALL</span>
+                                                ) : isGoal ? (
+                                                    <div className="text-center font-mono">
+                                                        <div className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400">GOAL</div>
+                                                        <div className="text-xs font-bold">+10.0</div>
+                                                    </div>
+                                                ) : isPit ? (
+                                                    <div className="text-center font-mono">
+                                                        <div className="text-[10px] font-bold text-red-700 dark:text-red-400">PIT</div>
+                                                        <div className="text-xs font-bold">-10.0</div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center font-mono">
+                                                        <div className="text-[9px] text-slate-400 dark:text-slate-500">({r},{c})</div>
+                                                        <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                                            {val !== null ? val.toFixed(2) : ''}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabCliffWalking = () => {
+            const [mode, setMode] = useState('qlearning');
+            const [epsilon, setEpsilon] = useState(0.15);
+            const [episodesRun, setEpisodesRun] = useState(12);
+
+            const rewardCurve = useMemo(() => {
+                const points = [];
+                for (let ep = 1; ep <= episodesRun; ep++) {
+                    if (mode === 'qlearning') {
+                        const base = -13 - (ep < 5 ? 40 / ep : 0);
+                        const fall = Math.random() < epsilon ? -100 : 0;
+                        points.push({ ep, reward: fall !== 0 ? fall : base });
+                    } else {
+                        const base = -17 - (ep < 5 ? 30 / ep : 0);
+                        const fall = Math.random() < (epsilon * 0.1) ? -100 : 0;
+                        points.push({ ep, reward: fall !== 0 ? fall : base });
+                    }
+                }
+                return points;
+            }, [mode, epsilon, episodesRun]);
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div>
+                            <h4 className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 uppercase">
+                                Cliff Walking Arena — Q-Learning vs SARSA
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-serif">
+                                Off-policy optimal edge greed (Watkins Q) vs on-policy safe trajectory routing (SARSA)
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded font-mono text-xs">
+                            <button
+                                onClick={() => setMode('qlearning')}
+                                className={`px-2.5 py-1 rounded transition-colors font-bold ${mode === 'qlearning' ? 'bg-optGreen text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'}`}
+                            >
+                                Q-Learning (Off-Policy)
+                            </button>
+                            <button
+                                onClick={() => setMode('sarsa')}
+                                className={`px-2.5 py-1 rounded transition-colors font-bold ${mode === 'sarsa' ? 'bg-optYellow text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'}`}
+                            >
+                                SARSA (On-Policy)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-3 font-mono text-xs">
+                            <div>
+                                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span>Exploration Rate (ε):</span>
+                                    <strong className="text-slate-900 dark:text-slate-200">{(epsilon * 100).toFixed(0)}%</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.01"
+                                    max="0.4"
+                                    step="0.02"
+                                    value={epsilon}
+                                    onChange={e => setEpsilon(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1.5">
+                                <div className="font-bold text-slate-700 dark:text-slate-300">Trajectory Behavioral Difference:</div>
+                                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-sans leading-relaxed">
+                                    {mode === 'qlearning'
+                                        ? 'Q-Learning evaluates max_a Q(s,a) regardless of action. It learns the cliff edge path (13 steps). However, during exploration, ε-random moves cause cliff drops (-100).'
+                                        : 'SARSA evaluates actual exploratory policy action. It recognizes that ε-random actions make the edge perilous, choosing the safer northern route.'}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setEpisodesRun(e => e + 5)}
+                                className="w-full py-1.5 bg-slate-800 dark:bg-slate-700 text-white rounded font-bold hover:bg-slate-700 dark:hover:bg-slate-600"
+                            >
+                                Run 5 More Episodes
+                            </button>
+                        </div>
+
+                        <div className="md:col-span-2 space-y-2">
+                            <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded p-2 text-xs font-mono">
+                                <div className="text-[10px] uppercase text-slate-400 dark:text-slate-500 font-bold mb-1">
+                                    Cliff Walking Grid Path Trajectory
+                                </div>
+                                <div className="grid grid-cols-12 gap-1 text-center font-bold text-[10px]">
+                                    {Array.from({ length: 48 }, (_, i) => {
+                                        const r = Math.floor(i / 12);
+                                        const c = i % 12;
+                                        const isStart = r === 3 && c === 0;
+                                        const isGoal = r === 3 && c === 11;
+                                        const isCliff = r === 3 && c > 0 && c < 11;
+                                        const isPath = mode === 'qlearning'
+                                            ? (r === 2 && c >= 0 && c <= 11) || (r === 3 && (c === 0 || c === 11))
+                                            : (r === 1 && c >= 0 && c <= 11) || (r >= 1 && (c === 0 || c === 11));
+
+                                        let style = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600';
+                                        if (isStart) style = 'bg-optGreen text-white font-bold';
+                                        else if (isGoal) style = 'bg-optAmber text-white font-bold';
+                                        else if (isCliff) style = 'bg-red-200 dark:bg-red-950/80 text-red-700 dark:text-red-300 border-red-300 dark:border-red-800';
+                                        else if (isPath) style = mode === 'qlearning' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-optGreen dark:text-emerald-400 border-emerald-300 dark:border-emerald-800' : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-800';
+
+                                        return (
+                                            <div key={i} className={`p-1 border rounded ${style}`}>
+                                                {isStart ? 'S' : isGoal ? 'G' : isCliff ? 'CLIFF' : '·'}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-1 h-12 items-end bg-slate-50 dark:bg-slate-950 p-2 rounded border border-slate-200 dark:border-slate-800">
+                                {rewardCurve.slice(-24).map((pt, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`flex-1 rounded-t transition-all ${pt.reward <= -50 ? 'bg-red-500' : (mode === 'qlearning' ? 'bg-optGreen' : 'bg-optYellow')}`}
+                                        style={{ height: `${Math.max(10, Math.min(100, (pt.reward + 110) * 0.9))}%` }}
+                                        title={`Ep ${pt.ep}: Reward ${pt.reward.toFixed(1)}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabBandits = () => {
+            const [strategy, setStrategy] = useState('ucb');
+            const [cParam, setCParam] = useState(1.41);
+            const [epsilon, setEpsilon] = useState(0.1);
+            const trueArms = [0.25, 0.40, 0.75, 0.55];
+
+            const [pulls, setPulls] = useState([0, 0, 0, 0]);
+            const [successes, setSuccesses] = useState([0, 0, 0, 0]);
+            const [totalSteps, setTotalSteps] = useState(0);
+
+            const pullArm = (armIdx) => {
+                const win = Math.random() < trueArms[armIdx] ? 1 : 0;
+                setPulls(p => { const n = [...p]; n[armIdx]++; return n; });
+                setSuccesses(s => { const n = [...s]; n[armIdx] += win; return n; });
+                setTotalSteps(t => t + 1);
+            };
+
+            const autoStep = (steps = 20) => {
+                for (let step = 0; step < steps; step++) {
+                    let chosenArm = 0;
+                    const t = Math.max(1, totalSteps + step);
+
+                    if (strategy === 'eps') {
+                        if (Math.random() < epsilon) {
+                            chosenArm = Math.floor(Math.random() * 4);
+                        } else {
+                            const empMeans = pulls.map((p, i) => p > 0 ? successes[i] / p : 0);
+                            chosenArm = empMeans.indexOf(Math.max(...empMeans));
+                        }
+                    } else if (strategy === 'ucb') {
+                        const ucbScores = pulls.map((p, i) => {
+                            if (p === 0) return 9999;
+                            const mean = successes[i] / p;
+                            return mean + cParam * Math.sqrt(Math.log(t) / p);
+                        });
+                        chosenArm = ucbScores.indexOf(Math.max(...ucbScores));
+                    } else {
+                        const samples = pulls.map((p, i) => {
+                            const s = successes[i];
+                            const mean = (s + 1) / (p + 2);
+                            const variance = (mean * (1 - mean)) / (p + 3);
+                            return mean + (Math.random() - 0.5) * Math.sqrt(variance);
+                        });
+                        chosenArm = samples.indexOf(Math.max(...samples));
+                    }
+                    pullArm(chosenArm);
+                }
+            };
+
+            const resetBandits = () => {
+                setPulls([0, 0, 0, 0]);
+                setSuccesses([0, 0, 0, 0]);
+                setTotalSteps(0);
+            };
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div>
+                            <h4 className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 uppercase">
+                                Multi-Armed Bandit Arena — Regret & Uncertainty
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-serif">
+                                Optimism in the face of uncertainty: ε-Greedy vs UCB1 vs Thompson Sampling
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded font-mono text-xs">
+                            <button
+                                onClick={() => setStrategy('eps')}
+                                className={`px-2 py-1 rounded font-bold ${strategy === 'eps' ? 'bg-optGreen text-white' : 'text-slate-600 dark:text-slate-400'}`}
+                            >
+                                ε-Greedy
+                            </button>
+                            <button
+                                onClick={() => setStrategy('ucb')}
+                                className={`px-2 py-1 rounded font-bold ${strategy === 'ucb' ? 'bg-optGreen text-white' : 'text-slate-600 dark:text-slate-400'}`}
+                            >
+                                UCB1
+                            </button>
+                            <button
+                                onClick={() => setStrategy('thompson')}
+                                className={`px-2 py-1 rounded font-bold ${strategy === 'thompson' ? 'bg-optGreen text-white' : 'text-slate-600 dark:text-slate-400'}`}
+                            >
+                                Thompson
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        {trueArms.map((trueMean, idx) => {
+                            const p = pulls[idx];
+                            const s = successes[idx];
+                            const empMean = p > 0 ? (s / p) : 0;
+                            const isOptimal = idx === 2;
+
+                            return (
+                                <div
+                                    key={idx}
+                                    className={`p-3 rounded-lg border-2 flex flex-col items-center gap-2 transition-all ${isOptimal ? 'border-optGreen bg-emerald-50/40 dark:bg-emerald-950/20' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'}`}
+                                >
+                                    <div className="w-full flex items-center justify-between font-mono text-xs">
+                                        <span className="font-bold text-slate-800 dark:text-slate-200">Arm #{idx + 1}</span>
+                                        {isOptimal && <span className="text-[10px] text-optGreen font-bold px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 rounded">OPTIMAL</span>}
+                                    </div>
+
+                                    <div className="text-xl font-mono font-bold text-slate-800 dark:text-slate-100 mt-1">
+                                        {(empMean * 100).toFixed(0)}%
+                                    </div>
+                                    <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                                        Pulls: <strong>{p}</strong> | Wins: <strong>{s}</strong>
+                                    </div>
+
+                                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                                        <div
+                                            className="bg-optGreen h-full transition-all"
+                                            style={{ width: `${empMean * 100}%` }}
+                                        />
+                                    </div>
+
+                                    <button
+                                        onClick={() => pullArm(idx)}
+                                        className="w-full py-1 text-xs font-mono border border-slate-300 dark:border-slate-700 rounded hover:border-optGreen dark:hover:border-optGreen hover:text-optGreen transition-colors mt-1"
+                                    >
+                                        Pull Arm
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs font-mono bg-slate-50 dark:bg-slate-950 p-2.5 rounded border border-slate-200 dark:border-slate-800">
+                        <span className="text-slate-600 dark:text-slate-400">Total Horizon Pulls: <strong className="text-slate-900 dark:text-slate-200">{totalSteps}</strong></span>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => autoStep(25)}
+                                className="px-3 py-1 bg-optGreen text-white font-bold rounded hover:bg-optGreen/90"
+                            >
+                                Step 25 Iterations
+                            </button>
+                            <button
+                                onClick={resetBandits}
+                                className="px-2.5 py-1 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabBellmanContraction = () => {
+            const [gamma, setGamma] = useState(0.85);
+            const [vInit, setVInit] = useState(2.0);
+            const fixedPointV = 10.0;
+
+            const steps = useMemo(() => {
+                const trajectory = [];
+                let curr = vInit;
+                for (let k = 0; k < 7; k++) {
+                    const next = fixedPointV + gamma * (curr - fixedPointV);
+                    trajectory.push({ step: k, val: curr, error: Math.abs(curr - fixedPointV) });
+                    curr = next;
+                }
+                return trajectory;
+            }, [gamma, vInit]);
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div>
+                            <h4 className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 uppercase flex items-center gap-2">
+                                <span>Bellman Operator</span>
+                                <MathView math="\mathcal{T}^*" />
+                                <span>Contraction Mapping</span>
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-serif flex items-center gap-1.5">
+                                <span>Banach fixed-point theorem: geometric error contraction with factor</span>
+                                <MathView math="\gamma < 1" />
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-3 font-mono text-xs">
+                            <div>
+                                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1">Discount Factor (<MathView math="\gamma" />):</span>
+                                    <strong className="text-optGreen font-bold">{gamma.toFixed(2)}</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.4"
+                                    max="0.95"
+                                    step="0.05"
+                                    value={gamma}
+                                    onChange={e => setGamma(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1">Initial Estimate (<MathView math="V_0" />):</span>
+                                    <strong className="text-slate-900 dark:text-slate-200">{vInit.toFixed(1)}</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.0"
+                                    max="20.0"
+                                    step="0.5"
+                                    value={vInit}
+                                    onChange={e => setVInit(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
+                                <div className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                    <span>True Fixed Point</span>
+                                    <MathView math="V^*" />:
+                                    <strong className="text-optGreen">{fixedPointV.toFixed(1)}</strong>
+                                </div>
+                                <div className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                    <span>Contraction Rate:</span>
+                                    <strong className="text-optGreen"><MathView math={`\\gamma = ${gamma.toFixed(2)}`} /></strong>
+                                </div>
+                                <div className="text-slate-500 dark:text-slate-400">Steps to 99% Precision: <strong className="text-amber-600 dark:text-amber-400">{Math.ceil(Math.log(0.01) / Math.log(gamma))}</strong></div>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 overflow-x-auto">
+                            <table className="w-full text-xs font-mono text-left border border-slate-200 dark:border-slate-800 rounded">
+                                <thead className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                    <tr>
+                                        <th className="p-2 border-b dark:border-slate-700">Iteration (k)</th>
+                                        <th className="p-2 border-b dark:border-slate-700">Estimate <MathView math="V_k" /></th>
+                                        <th className="p-2 border-b dark:border-slate-700">Error <MathView math="\|V_k - V^*\|" /></th>
+                                        <th className="p-2 border-b dark:border-slate-700">Contraction Residual</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {steps.map(s => (
+                                        <tr key={s.step} className="border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                            <td className="p-2 font-bold text-optGreen">
+                                                <MathView math={`\\mathcal{T}^{${s.step}} V`} />
+                                            </td>
+                                            <td className="p-2 text-slate-900 dark:text-slate-100">{s.val.toFixed(3)}</td>
+                                            <td className="p-2 text-amber-600 dark:text-amber-400 font-bold">{s.error.toFixed(4)}</td>
+                                            <td className="p-2 text-slate-500 dark:text-slate-400">
+                                                <div className="w-24 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="bg-optGreen h-full"
+                                                        style={{ width: `${Math.min(100, s.error * 10)}%` }}
+                                                    />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabPPOClip = () => {
+            const [advantage, setAdvantage] = useState(1.2);
+            const [epsilon, setEpsilon] = useState(0.2);
+
+            const curve = useMemo(() => {
+                const pts = [];
+                for (let r = 0.5; r <= 1.5; r += 0.05) {
+                    const unclipped = r * advantage;
+                    const clippedRatio = Math.min(Math.max(r, 1 - epsilon), 1 + epsilon);
+                    const clipped = clippedRatio * advantage;
+                    const ppo = Math.min(unclipped, clipped);
+                    pts.push({ r: parseFloat(r.toFixed(2)), unclipped, clipped, ppo });
+                }
+                return pts;
+            }, [advantage, epsilon]);
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div>
+                            <h4 className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 uppercase">
+                                PPO Clipped Surrogate Loss Landscape
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-serif flex items-center gap-1.5 flex-wrap">
+                                <span>Pessimistic lower bound:</span>
+                                <MathView math="L^{CLIP}(\theta) = \min(r_t \hat{A}_t, \; \text{clip}(r_t, 1-\epsilon, 1+\epsilon)\hat{A}_t)" />
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-3 font-mono text-xs">
+                            <div>
+                                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1">Advantage (<MathView math="\hat{A}_t" />):</span>
+                                    <strong className={advantage >= 0 ? 'text-optGreen' : 'text-red-500'}>
+                                        {advantage.toFixed(2)}
+                                    </strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="-2.0"
+                                    max="2.0"
+                                    step="0.1"
+                                    value={advantage}
+                                    onChange={e => setAdvantage(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1">Clipping Envelope (<MathView math="\epsilon" />):</span>
+                                    <strong className="text-slate-900 dark:text-slate-200">{epsilon.toFixed(2)}</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.05"
+                                    max="0.4"
+                                    step="0.05"
+                                    value={epsilon}
+                                    onChange={e => setEpsilon(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded border border-slate-200 dark:border-slate-800 text-[11px] font-sans text-slate-600 dark:text-slate-400 leading-relaxed">
+                                {advantage >= 0 ? (
+                                    <span className="flex items-center gap-1 flex-wrap">
+                                        <strong>Positive Advantage (<MathView math="\hat{A} > 0" />):</strong>
+                                        <span>Action outperformed average. Objective is clipped at</span>
+                                        <MathView math="1 + \epsilon" />
+                                        <span>to prevent moving the policy too far in one update.</span>
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-1 flex-wrap">
+                                        <strong>Negative Advantage (<MathView math="\hat{A} < 0" />):</strong>
+                                        <span>Action performed worse than average. Objective is clipped at</span>
+                                        <MathView math="1 - \epsilon" />
+                                        <span>to avoid a devastatingly large gradient step.</span>
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+                            <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 pb-2 border-b border-slate-200 dark:border-slate-800">
+                                <span className="flex items-center gap-1">
+                                    <span>Ratio</span>
+                                    <MathView math="r_t(\theta) = \frac{\pi_\theta(a|s)}{\pi_{old}(a|s)}" />
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <span>PPO Clipped Objective</span>
+                                    <MathView math="L^{CLIP}" />
+                                </span>
+                            </div>
+
+                            <div className="flex items-end gap-1 h-32 pt-4 px-2">
+                                {curve.map((pt, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex-1 flex flex-col items-center h-full justify-end group relative"
+                                    >
+                                        <div
+                                            className={`w-full rounded-t transition-all ${pt.ppo >= 0 ? 'bg-optGreen' : 'bg-red-500'}`}
+                                            style={{ height: `${Math.min(100, Math.max(8, Math.abs(pt.ppo) * 35))}%` }}
+                                        />
+                                        <span className="text-[8px] font-mono text-slate-400 dark:text-slate-500 mt-1">
+                                            {pt.r % 0.2 === 0 ? pt.r.toFixed(1) : ''}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabGAETrace = () => {
+            const [lambda, setLambda] = useState(0.95);
+            const [gamma, setGamma] = useState(0.99);
+
+            const weights = useMemo(() => {
+                const w = [];
+                for (let l = 0; l < 8; l++) {
+                    w.push(Math.pow(gamma * lambda, l));
+                }
+                return w;
+            }, [lambda, gamma]);
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div>
+                            <h4 className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 uppercase flex items-center gap-2">
+                                <span>Generalized Advantage Estimation (GAE) &</span>
+                                <MathView math="\lambda" />
+                                <span>-Trace</span>
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-serif flex items-center gap-1.5 flex-wrap">
+                                <span>Interpolating between 1-step TD (</span>
+                                <MathView math="\lambda=0" />
+                                <span>, biased) and full Monte Carlo (</span>
+                                <MathView math="\lambda=1" />
+                                <span>, high variance)</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-3 font-mono text-xs">
+                            <div>
+                                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1">Trace Factor (<MathView math="\lambda" />):</span>
+                                    <strong className="text-optGreen">{lambda.toFixed(2)}</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.0"
+                                    max="1.0"
+                                    step="0.05"
+                                    value={lambda}
+                                    onChange={e => setLambda(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div>
+                                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1">Discount Factor (<MathView math="\gamma" />):</span>
+                                    <strong className="text-slate-900 dark:text-slate-200">{gamma.toFixed(2)}</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.8"
+                                    max="1.0"
+                                    step="0.01"
+                                    value={gamma}
+                                    onChange={e => setGamma(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
+                                <div className="text-slate-500 dark:text-slate-400">
+                                    Estimator Bias: <strong className="text-amber-600 dark:text-amber-400">{((1 - lambda) * 100).toFixed(0)}%</strong>
+                                </div>
+                                <div className="text-slate-500 dark:text-slate-400">
+                                    Sample Variance: <strong className="text-optGreen">{(lambda * 100).toFixed(0)}%</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 space-y-2">
+                            <div className="text-xs font-mono text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+                                <span>Temporal Advantage Weight Decay:</span>
+                                <MathView math="(\gamma \lambda)^l" />
+                            </div>
+                            <div className="grid grid-cols-8 gap-1.5 h-28 items-end bg-slate-50 dark:bg-slate-950 p-2 rounded border border-slate-200 dark:border-slate-800">
+                                {weights.map((wt, idx) => (
+                                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end">
+                                        <div
+                                            className="w-full bg-optGreen rounded-t transition-all"
+                                            style={{ height: `${wt * 100}%` }}
+                                        />
+                                        <span className="text-[9px] font-mono text-slate-500 dark:text-slate-400 mt-1">l={idx}</span>
+                                        <span className="text-[8px] font-mono text-slate-400 dark:text-slate-500">{(wt).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabSoftmaxEntropy = () => {
+            const [temp, setTemp] = useState(1.0);
+            const [logits, setLogits] = useState([2.5, 1.2, 0.4, -0.8]);
+
+            const probs = useMemo(() => {
+                const exps = logits.map(z => Math.exp(z / Math.max(0.05, temp)));
+                const sum = exps.reduce((a, b) => a + b, 0);
+                return exps.map(e => e / sum);
+            }, [logits, temp]);
+
+            const entropy = useMemo(() => {
+                return -probs.reduce((sum, p) => sum + (p > 0 ? p * Math.log(p) : 0), 0);
+            }, [probs]);
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div>
+                            <h4 className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 uppercase">
+                                Softmax Temperature & Shannon Policy Entropy
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-serif flex items-center gap-1.5">
+                                <MathView math="H(\pi) = -\sum \pi(a) \ln \pi(a)" />
+                                <span>— Preventing premature deterministic collapse</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-3 font-mono text-xs">
+                            <div>
+                                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1">Temperature (<MathView math="\tau" />):</span>
+                                    <strong className="text-optGreen">{temp.toFixed(2)}</strong>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0.1"
+                                    max="3.0"
+                                    step="0.05"
+                                    value={temp}
+                                    onChange={e => setTemp(parseFloat(e.target.value))}
+                                    className="w-full accent-optGreen"
+                                />
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded border border-slate-200 dark:border-slate-800 space-y-1">
+                                <div className="text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                    <span>Policy Entropy</span>
+                                    <MathView math="H(\pi)" />:
+                                    <strong className="text-optGreen">{entropy.toFixed(3)} nats</strong>
+                                </div>
+                                <div className="text-slate-500 dark:text-slate-400">
+                                    Max Possible (Uniform): <strong className="text-slate-700 dark:text-slate-300">1.386 nats</strong>
+                                </div>
+                                <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold pt-1">
+                                    {temp < 0.3 ? '⚠️ High risk of deterministic collapse' : '✓ Healthy exploration entropy'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 flex flex-col justify-end gap-2 bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <div className="grid grid-cols-4 gap-2 h-28 items-end">
+                                {probs.map((p, idx) => (
+                                    <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end">
+                                        <div
+                                            className="w-full bg-optGreen rounded-t transition-all"
+                                            style={{ height: `${p * 100}%` }}
+                                        />
+                                        <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300 mt-1">
+                                            Act {idx + 1}
+                                        </span>
+                                        <span className="text-[9px] font-mono text-optGreen font-semibold">
+                                            {(p * 100).toFixed(1)}%
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabCartPole = () => {
+            const canvasRef = useRef(null);
+            const [running, setRunning] = useState(true);
+            const [theta, setTheta] = useState(0.08);
+            const [thetaDot, setThetaDot] = useState(0.0);
+            const [x, setX] = useState(0.0);
+            const [xDot, setXDot] = useState(0.0);
+
+            useEffect(() => {
+                if (!running) return;
+                const interval = setInterval(() => {
+                    const g = 9.8;
+                    const massCart = 1.0;
+                    const massPole = 0.1;
+                    const length = 0.5;
+
+                    const u = -15 * theta - 4 * thetaDot - 2 * x - 2 * xDot;
+
+                    const thetaAcc = (g * Math.sin(theta) + Math.cos(theta) * ((-u - massPole * length * thetaDot * thetaDot * Math.sin(theta)) / (massCart + massPole))) /
+                                     (length * (4.0/3.0 - (massPole * Math.cos(theta) * Math.cos(theta)) / (massCart + massPole)));
+                    const xAcc = (u + massPole * length * (thetaDot * thetaDot * Math.sin(theta) - thetaAcc * Math.cos(theta))) / (massCart + massPole);
+
+                    setThetaDot(td => td + thetaAcc * 0.02);
+                    setTheta(t => t + thetaDot * 0.02);
+                    setXDot(xd => xd + xAcc * 0.02);
+                    setX(currX => Math.max(-2, Math.min(2, currX + xDot * 0.02)));
+                }, 20);
+
+                return () => clearInterval(interval);
+            }, [running, theta, thetaDot, x, xDot]);
+
+            useEffect(() => {
+                const cvs = canvasRef.current;
+                if (!cvs) return;
+                const ctx = cvs.getContext('2d');
+                const w = cvs.width;
+                const h = cvs.height;
+                const isDark = document.documentElement.classList.contains('dark');
+
+                ctx.clearRect(0, 0, w, h);
+
+                // Track rail
+                ctx.strokeStyle = isDark ? '#334155' : '#cbd5e1';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(20, h - 30);
+                ctx.lineTo(w - 20, h - 30);
+                ctx.stroke();
+
+                // Cart position
+                const cartX = (w / 2) + (x * 70);
+                const cartY = h - 35;
+
+                // Draw cart
+                ctx.fillStyle = isDark ? '#e2e8f0' : '#0f172a';
+                ctx.fillRect(cartX - 25, cartY - 12, 50, 20);
+
+                // Draw pole
+                const poleLen = 80;
+                const poleEndX = cartX + poleLen * Math.sin(theta);
+                const poleEndY = cartY - poleLen * Math.cos(theta);
+
+                ctx.strokeStyle = '#16a34a';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(cartX, cartY);
+                ctx.lineTo(poleEndX, poleEndY);
+                ctx.stroke();
+
+                // Pole tip bob
+                ctx.fillStyle = '#d97706';
+                ctx.beginPath();
+                ctx.arc(poleEndX, poleEndY, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }, [x, theta]);
+
+            const perturb = (force) => {
+                setThetaDot(td => td + force);
+            };
+
+            const resetPendulum = () => {
+                setTheta(0.12);
+                setThetaDot(0);
+                setX(0);
+                setXDot(0);
+            };
+
+            return (
+                <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+                        <div>
+                            <h4 className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 uppercase">
+                                Real-Time CartPole Continuous Control Simulation
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-serif">
+                                Closed-loop state feedback stabilizing an underactuated non-linear inverted pendulum
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => perturb(-0.8)}
+                                className="px-2.5 py-1 text-xs font-mono border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                            >
+                                ← Nudge Left
+                            </button>
+                            <button
+                                onClick={() => perturb(0.8)}
+                                className="px-2.5 py-1 text-xs font-mono border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                            >
+                                Nudge Right →
+                            </button>
+                            <button
+                                onClick={resetPendulum}
+                                className="px-2.5 py-1 text-xs font-mono bg-optGreen text-white font-bold rounded"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2 font-mono text-xs bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <div className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                                <span>State Vector:</span>
+                                <MathView math="\mathbf{s} = [x, \dot{x}, \theta, \dot{\theta}]^T" />
+                            </div>
+                            <div className="text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                <span>Pole Angle (</span><MathView math="\theta" /><span>):</span>
+                                <strong className="text-optGreen font-bold">{(theta * 180 / Math.PI).toFixed(1)}°</strong>
+                            </div>
+                            <div className="text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                <span>Angular Vel (</span><MathView math="\dot{\theta}" /><span>):</span>
+                                <strong className="text-slate-900 dark:text-slate-100">{thetaDot.toFixed(2)} rad/s</strong>
+                            </div>
+                            <div className="text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                <span>Cart Position (</span><MathView math="x" /><span>):</span>
+                                <strong className="text-slate-900 dark:text-slate-100">{x.toFixed(2)} m</strong>
+                            </div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-2 font-sans flex items-center gap-1 flex-wrap">
+                                <span>An active stabilizing actor-critic policy continuously adjusts cart velocity to maintain vertical pole equilibrium (</span>
+                                <MathView math="\theta = 0" />
+                                <span>).</span>
+                            </div>
+                        </div>
+
+                        <div className="md:col-span-2 flex justify-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-2">
+                            <canvas
+                                ref={canvasRef}
+                                width={420}
+                                height={160}
+                                className="w-full max-w-md h-auto"
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ConceptArticulation = ({ activeId }) => {
+            const node = NODE_MAP.get(activeId);
+            const [activeLabId, setActiveLabId] = useState(node ? node.labId || 'gridworld' : 'gridworld');
+
+            useEffect(() => {
+                if (node && node.labId) {
+                    setActiveLabId(node.labId);
+                }
+            }, [node]);
+
+            if (!node) return null;
+
+            return (
+                <section className="w-full px-5 py-5 sm:px-7 lg:px-8 lg:py-7 transition-colors">
+                    <div className="mt-1">
+                        <h2 className="text-xl sm:text-2xl font-serif font-bold text-slate-900 dark:text-slate-50">
+                            {node.title}
+                        </h2>
+
+                        <p className="mt-3 font-serif text-slate-700 dark:text-slate-300 text-base sm:text-lg leading-relaxed">
+                            {node.abstract}
+                        </p>
+                    </div>
+
+                    {node.math && (
+                        <div className="mt-4 p-4 rounded-lg bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+                            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-1">
+                                First-Principles Mathematical Invariant
+                            </div>
+                            <div className="font-mono text-sm sm:text-base font-semibold text-optGreen overflow-x-auto py-1">
+                                <MathView math={node.math} display={true} />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="mt-8 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+                        <div className="p-6">
+                            {activeLabId === 'gridworld' && <LabGridWorld />}
+                            {activeLabId === 'cliff' && <LabCliffWalking />}
+                            {activeLabId === 'bandits' && <LabBandits />}
+                            {activeLabId === 'contraction' && <LabBellmanContraction />}
+                            {activeLabId === 'ppo' && <LabPPOClip />}
+                            {activeLabId === 'gae' && <LabGAETrace />}
+                            {activeLabId === 'temperature' && <LabSoftmaxEntropy />}
+                            {activeLabId === 'cartpole' && <LabCartPole />}
+                        </div>
+                    </div>
+                </section>
+            );
+        };
+
+        const App = () => {
+            const [activeId, setActiveId] = useState('root');
+            const [theme, setTheme] = useState(() => {
+                return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            });
+
+            const toggleTheme = () => {
+                const next = theme === 'dark' ? 'light' : 'dark';
+                setTheme(next);
+                localStorage.setItem('opt-theme', next);
+                if (next === 'dark') {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            };
+
+            const FAST_ZOOMS = [
+                { label: 'Why does Bellman iterate to a unique optimum?', targetId: 'bellman-contraction' },
+                { label: 'How does Q-learning differ from SARSA on hazards?', targetId: 'q-learning-dqn' },
+                { label: 'How does PPO clip ratios prevent policy collapse?', targetId: 'trust-region-ppo' },
+                { label: 'Why does the score function cancel unknown dynamics ∇P?', targetId: 'score-function' },
+                { label: 'What is the role of entropy regularization in policies?', targetId: 'entropy-bonus' },
+                { label: 'How does UCB1 balance bandit exploration?', targetId: 'multi-armed-bandits' },
+                { label: 'How does continuous control stabilize pendulums?', targetId: 'continuous-control' }
+            ];
+
+            return (
+                <div className="h-screen max-h-screen w-screen flex flex-col overflow-hidden bg-optCanvas schematic-grid transition-colors">
+                    {/* Clean Header: Focused on Topic and Actions without generic banners */}
+                    <header className="h-12 border-b border-optBorder bg-optSurface/95 dark:bg-slate-900/90 backdrop-blur px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-40 transition-colors">
+                        <div className="flex items-center gap-2.5">
+                            <span className="h-2.5 w-2.5 rounded-full bg-optGreen" />
+                            <span className="font-mono text-xs font-bold tracking-tight text-slate-900 dark:text-slate-100 uppercase">
+                                Reinforcement Learning
+                            </span>
+                            <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+                            <span className="text-xs font-mono text-slate-500 dark:text-slate-400 font-medium truncate hidden sm:inline">
+                                Markov Decision Processes & Policy Optimization
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={toggleTheme}
+                                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                                className="p-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-optGreen dark:hover:border-optGreen transition-colors"
+                            >
+                                {theme === 'dark' ? <Lucide.Sun size={14} /> : <Lucide.Moon size={14} />}
+                            </button>
+
+                            <button
+                                onClick={() => setActiveId('root')}
+                                className="px-2.5 py-1 text-xs font-mono text-slate-600 dark:text-slate-300 hover:text-optGreen border border-slate-200 dark:border-slate-700 rounded hover:border-optGreen transition-colors"
+                            >
+                                Reset Root
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Fast Zoom-Hop Query Bar */}
+                    <div className="bg-optSurface dark:bg-slate-900/60 border-b border-optBorder px-4 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto text-xs font-mono">
+                        <span className="text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider text-[10px] shrink-0">
+                            Fast Zoom Hops:
+                        </span>
+                        <div className="flex gap-2 shrink-0">
+                            {FAST_ZOOMS.map((q, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => setActiveId(q.targetId)}
+                                    className="bg-optCanvas hover:bg-optGreen dark:hover:bg-optGreen hover:text-white dark:hover:text-white text-slate-700 dark:text-slate-300 border border-optBorder px-2.5 py-1 rounded text-[11px] transition-colors whitespace-nowrap shadow-sm"
+                                >
+                                    {q.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Main Hierarchical Canvas */}
+                    <main className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] overflow-y-auto xl:overflow-hidden">
+                        <section className="min-w-0 bg-optCanvas border-b xl:border-b-0 xl:border-r border-optBorder xl:min-h-0 xl:flex xl:flex-col xl:overflow-hidden">
+                            <div className="px-5 pt-5 pb-2 sm:px-7">
+                                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Select a node to sync its explanation and lab.</p>
+                            </div>
+                            <ConceptMapExplorer
+                                activeId={activeId}
+                                onSelect={(id) => setActiveId(id)}
+                            />
+                        </section>
+
+                        <div className="min-w-0 bg-optSurface dark:bg-[#211f1d] xl:min-h-0 xl:overflow-y-auto">
+                            <ConceptArticulation activeId={activeId} />
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>

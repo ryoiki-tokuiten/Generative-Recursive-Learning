@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { SelectionEvent, PageNode } from '../types';
 import { Copy, Trash2, Check } from 'lucide-react';
+import { LessonTemplateGallery } from './LessonTemplateGallery';
 
 interface InteractionModalProps {
   selection: SelectionEvent;
   onClose: () => void;
-  onSubmit: (prompt: string) => void;
+  onSubmit: (prompt: string, templateFilename: string) => void;
+  initialTemplateFilename: string;
   existingBranches: PageNode[];
   onNavigateToBranch: (nodeId: string) => void;
   onDeleteBranch: (nodeId: string) => void;
@@ -15,11 +17,13 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({
   selection,
   onClose,
   onSubmit,
+  initialTemplateFilename,
   existingBranches,
   onNavigateToBranch,
   onDeleteBranch
 }) => {
   const [prompt, setPrompt] = useState('');
+  const [selectedTemplateFilename, setSelectedTemplateFilename] = useState(initialTemplateFilename);
   const [view, setView] = useState<'existing' | 'new'>(existingBranches.length > 0 ? 'existing' : 'new');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -33,12 +37,12 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
-    onSubmit(prompt);
+    onSubmit(prompt, selectedTemplateFilename);
   };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[#2a2a35] bg-[#121217] text-[#e2e8f0] shadow-[0_28px_80px_rgba(0,0,0,0.55)]">
+      <div className={`flex ${view === 'new' ? 'h-[min(90vh,31.25rem)]' : 'max-h-[90vh]'} max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#2a2a35] bg-[#121217] text-[#e2e8f0] shadow-[0_28px_80px_rgba(0,0,0,0.55)]`}>
         
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#2a2a35] bg-[#1a1a24] p-5">
@@ -49,17 +53,17 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto">
+        <div className="overflow-y-auto p-6">
           
-          <div className="mb-6 rounded-xl border border-[#00e599]/20 bg-[#00e599]/5 p-4 text-sm text-[#cbd5e1]">
-            <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#00e599]">
-              {selection.componentId}
-            </span>
-            <div className="line-clamp-3 italic">"{selection.textSummary}"</div>
-          </div>
-
           {view === 'existing' && (
             <div className="space-y-4">
+              <div className="rounded-xl border border-[#00e599]/20 bg-[#00e599]/5 p-4 text-sm text-[#cbd5e1]">
+                <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#00e599]">
+                  {selection.componentId}
+                </span>
+                <div className="line-clamp-3 italic">"{selection.textSummary}"</div>
+              </div>
+
               <p className="text-sm text-[#94a3b8]">This component already has branches. Choose a generation or create another.</p>
               
               <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -105,20 +109,38 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({
 
           {view === 'new' && (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[#cbd5e1]">
-                  What would you like to know about this?
-                </label>
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="e.g., Explain this diagram in more detail..."
-                  className="min-h-[100px] w-full resize-none rounded-lg border border-[#2a2a35] bg-[#1a1a24] p-3 text-[#e2e8f0] outline-none placeholder:text-[#64748b] focus:border-[#00e599]/60 focus:ring-1 focus:ring-[#00e599]/30"
-                  autoFocus
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div className="min-w-0 space-y-4">
+                  <div className="rounded-xl border border-[#00e599]/20 bg-[#00e599]/5 p-4 text-sm text-[#cbd5e1]">
+                    <span className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-[#00e599]">
+                      {selection.componentId}
+                    </span>
+                    <div className="line-clamp-3 italic">"{selection.textSummary}"</div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="follow-up-prompt" className="mb-2 block text-sm font-medium text-[#cbd5e1]">
+                      What would you like to know about this?
+                    </label>
+                    <textarea
+                      id="follow-up-prompt"
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="e.g., Explain this diagram in more detail..."
+                      className="min-h-[100px] w-full resize-none rounded-lg border border-[#2a2a35] bg-[#1a1a24] p-3 text-[#e2e8f0] outline-none placeholder:text-[#64748b] focus:border-[#00e599]/60 focus:ring-1 focus:ring-[#00e599]/30"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <LessonTemplateGallery
+                  compact
+                  selectedFilename={selectedTemplateFilename}
+                  onSelect={setSelectedTemplateFilename}
                 />
               </div>
               
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 border-t border-[#2a2a35] pt-4">
                 {existingBranches.length > 0 && (
                     <button
                         type="button"

@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compression is Intelligence: A Spatial Explanation with User Artifacts and Schema Linking">
+    <title>Compression == Intelligence 2.0</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        canvas: {
+                            bg: '#040404',
+                            dot: '#171717',
+                            node: '#0b0b0b',
+                            nodeHover: '#141414',
+                            border: '#242424',
+                            borderHover: '#383838',
+                            text: '#f1f1f1',
+                            muted: '#737373',
+                            accent: '#10b981', // Emerald
+                            accentDim: 'rgba(16, 185, 129, 0.12)',
+                            warning: '#f59e0b', // Amber
+                            warningDim: 'rgba(245, 158, 11, 0.12)',
+                            highlight: '#3b82f6',
+                            purple: '#a855f7',
+                            rose: '#f43f5e',
+                            conduit: '#1f2421'
+                        },
+                        article: {
+                            bg: '#000000',
+                            text: '#a1a1aa',
+                            heading: '#ffffff',
+                            border: '#18181b'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'monospace']
+                    }
+                }
+            }
+        };
+    </script>
+    
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.3.1",
+            "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+            "react/jsx-dev-runtime": "https://esm.sh/react@18.3.1/jsx-dev-runtime",
+            "react-dom": "https://esm.sh/react-dom@18.3.1",
+            "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0?external=react,react-dom",
+            "recharts": "https://esm.sh/recharts@2.12.0?external=react,react-dom",
+            "zustand": "https://esm.sh/zustand@4.5.0?external=react",
+            "clsx": "https://esm.sh/clsx@2.1.0",
+            "tailwind-merge": "https://esm.sh/tailwind-merge@2.2.1"
+        }
+    }
+    </script>
+    
+    <style>
+        body {
+            background-color: #000;
+            margin: 0;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            user-select: none;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #262626; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #404040; }
+
+        .tldraw-bg {
+            background-color: var(--color-canvas-bg, #040404);
+            background-image: radial-gradient(var(--color-canvas-dot, #171717) 1.2px, transparent 0);
+            background-size: 30px 30px;
+            background-position: -15px -15px;
+        }
+
+        .prose p { margin-bottom: 1.8em; line-height: 1.8; color: #a1a1aa; font-weight: 300; font-size: 0.95rem; }
+        .prose h2 { color: #fff; font-size: 1.25rem; font-weight: 500; margin-bottom: 1.2em; letter-spacing: -0.02em; }
+        .prose section { transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .prose .math-block { 
+            font-family: 'Fira Code', monospace; 
+            font-size: 0.85rem;
+            color: #10b981;
+            background: linear-gradient(145deg, #090909, #030303);
+            border: 1px solid #1c1c1c;
+            border-left: 3px solid #10b981;
+            padding: 1.1rem;
+            margin: 1.8rem 0;
+            border-radius: 4px;
+        }
+        
+        .spatial-node {
+            transition: border-color 0.4s ease, box-shadow 0.4s ease, opacity 0.4s ease;
+            will-change: transform, opacity;
+            transform-origin: center center;
+        }
+        
+        .spatial-node.active-accent {
+            border-color: #10b981 !important;
+            box-shadow: 0 0 35px rgba(16, 185, 129, 0.2), inset 0 0 12px rgba(16, 185, 129, 0.05);
+            z-index: 20;
+        }
+        
+        .spatial-node.active-warning {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 35px rgba(245, 158, 11, 0.2);
+            z-index: 20;
+        }
+
+        .spatial-node.dimmed { 
+            opacity: 0.15; 
+            filter: grayscale(80%) blur(0.5px);
+        }
+
+        .edge-line {
+            stroke: #222222;
+            stroke-width: 1.5;
+            fill: none;
+            transition: stroke 0.6s ease, stroke-width 0.6s ease;
+        }
+        .edge-line.active { stroke: #10b981; stroke-width: 2.2; filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.4)); }
+        .edge-line.active-warning { stroke: #f59e0b; stroke-width: 2.2; filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.4)); }
+
+        .conduit-line {
+            fill: none;
+            stroke: #1a1a1a;
+            stroke-width: 1.5;
+            stroke-dasharray: 6 6;
+            transition: stroke 0.6s ease, opacity 0.6s ease;
+        }
+        .conduit-line.active {
+            stroke: #10b981;
+            stroke-width: 2;
+            stroke-dasharray: 8 6;
+            opacity: 0.85;
+            filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4));
+        }
+
+        .gradient-fade-bottom {
+            mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { create } from 'zustand';
+        import { clsx } from 'clsx';
+        import { twMerge } from 'tailwind-merge';
+        import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
+        import * as Lucide from 'lucide-react';
+
+        const cn = (...inputs) => twMerge(clsx(inputs));
+
+        // --- ARTICLE UNITS & LESSON DATA ---
+        const ARTICLE = [
+            { id: 'sec-intro', title: '1. What the claim actually says', text: [
+                '“Compression is intelligence” is useful only if stated with mathematical precision. Discovering a compact description of data forces an agent to uncover regularities, and those regularities are what powers prediction, generalization, and abstract reasoning.',
+                'A learner derives a compact model M plus an exception residual r such that together they losslessly reconstruct observation x.'
+            ], math: 'L(x) = L(M) + L(x | M)' },
+            
+            { id: 'sec-reg', title: '2. Regularity is the source of compressibility', text: [
+                'Compression eliminates redundancy. If observations are purely stochastic, no compact summary exists. Compression succeeds only when data is generated by an underlying low-complexity program.'
+            ]},
+            
+            { id: 'sec-tree', title: '3. Separating rule from residual', text: [
+                'Every coherent model factors data into two terms: what recurs and what deviates. The rule is compressed into shared weights; the residual encodes irreducible exceptions.',
+                'For the sequence ABAC ABAC ABAC ABAD, the model stores “repeat ABAC 3 times”, while the residual isolates the final divergent symbol D.'
+            ]},
+            
+            { id: 'sec-entropy', title: '4. Entropy bounds the irreducible cost', text: [
+                'Shannon entropy determines the minimum average number of bits required per symbol. It establishes the mathematical lower bound on compression given symbol frequency distributions.'
+            ], math: 'H(X) = - Σ p(x) log₂ p(x)' },
+            
+            { id: 'sec-mdl', title: '5. Minimum Description Length (MDL)', text: [
+                'The MDL principle penalizes both underfitting and overfitting. An oversimplified model yields an enormous residual, while a memorized lookup table inflates the model itself. Intelligence sits at the global minimum.'
+            ], math: 'M* = argmin_M [ L(M) + L(D | M) ]' },
+            
+            { id: 'sec-pred', title: '6. Prediction by minimum addition', text: [
+                'A compressor predicts the next token by calculating which continuation adds the fewest bits to the total code length. The candidate minimizing descriptive surprise is assigned the highest probability.'
+            ], math: 'Score(a) = L(context · a) - L(context)' },
+
+            { id: 'sec-semantic', title: '7. Semantic Compression', text: [
+                'Higher cognitive systems compose primitive patterns into hierarchical concepts. Raw episodic streams—flights, reservations, footwear, training sessions—compress into high-order narratives.',
+                'Factoring shared meaning across layers shrinks sensory streams into dense representations. This compositional hierarchy is the basis of abstraction.'
+            ]},
+
+            { id: 'sec-temporal', title: '8. Temporal Memory Compression', text: [
+                'Biological memory behaves as a lossy multi-scale compression algorithm. Present events are retained with high episodic fidelity. As time elapses, fine-grained residuals are discarded.',
+                'The system retains only low-frequency invariant schemas. The older the event horizon, the more aggressively fine details are pruned to conserve capacity.'
+            ]},
+            
+            { id: 'sec-end', title: '9. The architecture of understanding', text: [
+                'Intelligence is the synthesis of these mechanisms: extracting regularities, bounding uncertainty, balancing model capacity, building compositional trees, and consolidating memory across time.'
+            ]}
+        ];
+
+        // --- STATION COORDINATE DEFINITIONS (Anchors for user conduits) ---
+        const STATION_COORDINATES = {
+            'sec-intro':    { x: 0, y: 0, label: 'Tree Root Model' },
+            'sec-reg':      { x: -300, y: 290, label: 'Regular Pattern Branches' },
+            'sec-tree':     { x: 280, y: 140, label: 'Residual Exception Branch' },
+            'sec-entropy':  { x: -1250, y: 200, label: 'Shannon Bound Station' },
+            'sec-mdl':      { x: 1250, y: 200, label: 'MDL Optimization Station' },
+            'sec-pred':     { x: 0, y: 840, label: 'Predictive Inference Station' },
+            'sec-semantic': { x: -1150, y: 1050, label: 'Semantic Factorization Hierarchy' },
+            'sec-temporal': { x: 1150, y: 1050, label: 'Temporal Multi-Scale Store' },
+            'sec-end':      { x: 0, y: 550, label: 'Global Canvas Apex' },
+        };
+
+        // --- CAMERA WAYPOINTS ---
+        const SPATIAL_VIEWS = {
+            'sec-intro':    { x: 0, y: 200, z: 0.85 },      
+            'sec-reg':      { x: -300, y: 310, z: 1.15 },   
+            'sec-tree':     { x: 0, y: 170, z: 1.15 },      
+            'sec-entropy':  { x: -1250, y: 200, z: 0.9 }, 
+            'sec-mdl':      { x: 1250, y: 200, z: 0.9 },  
+            'sec-pred':     { x: 0, y: 840, z: 0.95 },      
+            'sec-semantic': { x: -1150, y: 1050, z: 0.8 }, 
+            'sec-temporal': { x: 1150, y: 1050, z: 0.8 },  
+            'sec-end':      { x: 0, y: 600, z: 0.35 },
+        };
+
+        const HIGHLIGHTS = {
+            'sec-intro':    ['node-root', 'conduit-entropy', 'conduit-mdl'],
+            'sec-reg':      ['node-p1', 'node-p2', 'node-p3'],
+            'sec-tree':     ['node-rule', 'node-except', 'conduit-pred'],
+            'sec-entropy':  ['frame-entropy', 'conduit-entropy'],
+            'sec-mdl':      ['frame-mdl', 'conduit-mdl'],
+            'sec-pred':     ['frame-pred', 'conduit-pred', 'conduit-temp'],
+            'sec-semantic': ['frame-semantic', 'sem-all', 'conduit-sem', 'conduit-sem-temp'],
+            'sec-temporal': ['frame-temporal', 'temp-all', 'conduit-temp', 'conduit-sem-temp'],
+            'sec-end':      ['all'],
+        };
+
+        // --- STREAMING_CHUNK:Defining Zustand global store and user artifact management... ---
+        const useStore = create((set, get) => ({
+            activeSection: 'sec-intro',
+            camera: { x: 0, y: 200, z: 0.85 },
+            isManualNavigation: false,
+            configuredArtifactId: null,
+            
+            // Initial seed user artifacts to showcase capability
+            artifacts: [
+                {
+                    id: 'art-demo-1',
+                    type: 'note',
+                    x: -550,
+                    y: -100,
+                    w: 240,
+                    h: 130,
+                    title: 'Core Hypotheses',
+                    content: 'Information is bounded by model capacity. Over-parameterization inflates residual entropy.',
+                    color: 'accent',
+                    linkedSectionId: 'sec-intro'
+                },
+                {
+                    id: 'art-demo-2',
+                    type: 'rect',
+                    x: 600,
+                    y: 750,
+                    w: 280,
+                    h: 180,
+                    title: 'Active Schema Boundary',
+                    content: 'Temporal & Predictive Integration Zone',
+                    color: 'purple',
+                    linkedSectionId: 'sec-temporal'
+                }
+            ],
+
+            setActiveSection: (id) => {
+                if (!SPATIAL_VIEWS[id]) return;
+                set({ 
+                    activeSection: id, 
+                    camera: SPATIAL_VIEWS[id],
+                    isManualNavigation: false 
+                });
+            },
+            
+            setCameraDirect: (cam) => set({ camera: cam, isManualNavigation: true }),
+            setConfiguredArtifactId: (id) => set({ configuredArtifactId: id }),
+
+            addArtifact: (type, extraData = {}) => {
+                const { camera, artifacts } = get();
+                const newId = `art-${Date.now()}`;
+                const base = {
+                    id: newId,
+                    type,
+                    x: Math.round(camera.x + (Math.random() * 80 - 40)),
+                    y: Math.round(camera.y + (Math.random() * 80 - 40)),
+                    w: type === 'rect' ? 300 : type === 'image' ? 260 : 220,
+                    h: type === 'rect' ? 180 : type === 'image' ? 220 : 130,
+                    title: type === 'note' ? 'Personal Note' : type === 'rect' ? 'Conceptual Frame' : 'Visual Artifact',
+                    content: type === 'note' ? 'Write observations here...' : type === 'rect' ? 'Grouped Boundary' : '',
+                    color: 'accent',
+                    linkedSectionId: 'sec-intro',
+                    ...extraData
+                };
+                set({ artifacts: [...artifacts, base], configuredArtifactId: newId });
+            },
+
+            updateArtifact: (id, patch) => {
+                set({
+                    artifacts: get().artifacts.map(a => a.id === id ? { ...a, ...patch } : a)
+                });
+            },
+
+            removeArtifact: (id) => {
+                set({
+                    artifacts: get().artifacts.filter(a => a.id !== id),
+                    configuredArtifactId: get().configuredArtifactId === id ? null : get().configuredArtifactId
+                });
+            }
+        }));
+
+        // --- MATH & DATASETS ---
+        const entropyBinary = (p) => p <= 0 || p >= 1 ? 0 : -p * Math.log2(p) - (1 - p) * Math.log2(1 - p);
+        const ENTROPY_DATA = Array.from({ length: 101 }, (_, i) => ({ p: i / 100, H: entropyBinary(i / 100) }));
+        
+        const MDL_DATA = [
+            { k: 0, data: 48, model: 2, total: 50 },
+            { k: 1, data: 28, model: 8, total: 36 },
+            { k: 2, data: 14, model: 18, total: 32 },
+            { k: 3, data: 9,  model: 36, total: 45 },
+            { k: 4, data: 5,  model: 62, total: 67 },
+        ];
+
+        const PRED_DATA = [
+            { sym: 'A', prob: 0.82, bits: 0.28, label: 'Highest Likelihood Continuation' },
+            { sym: 'B', prob: 0.08, bits: 3.64, label: 'Deviant Continuation' },
+            { sym: 'C', prob: 0.07, bits: 3.83, label: 'Deviant Continuation' },
+            { sym: 'D', prob: 0.03, bits: 5.05, label: 'High Surprise Residual' },
+        ];
+
+        // --- STREAMING_CHUNK:Rendering reusable node component... ---
+        const GraphNode = ({ id, x, y, width, multiplier, label, subtext, status = 'default', activeNodes = [] }) => {
+            const isAll = activeNodes.includes('all');
+            const isActive = isAll || activeNodes.includes(id);
+            const isDim = !isActive && activeNodes.length > 0 && !isAll;
+
+            const borderColor = status === 'warning' 
+                ? (isActive ? 'border-canvas-warning' : 'border-canvas-border')
+                : (isActive ? 'border-canvas-accent' : 'border-canvas-border');
+
+            return (
+                <div 
+                    className={cn(
+                        "spatial-node absolute flex items-stretch bg-canvas-node border rounded-md overflow-hidden shadow-md",
+                        borderColor,
+                        isActive && (status === 'warning' ? "active-warning" : "active-accent"),
+                        isDim && "dimmed"
+                    )}
+                    style={{ 
+                        left: x, 
+                        top: y, 
+                        width: width ? `${width}px` : 'auto',
+                        transform: 'translate(-50%, -50%)' 
+                    }}
+                >
+                    {multiplier && (
+                        <div className={cn(
+                            "px-3 py-2 font-mono text-xs font-bold flex items-center justify-center border-r transition-colors duration-500",
+                            status === 'warning'
+                                ? (isActive ? "bg-canvas-warning text-black border-canvas-warning" : "bg-[#1c1409] text-canvas-warning border-canvas-border")
+                                : (isActive ? "bg-canvas-accent text-black border-canvas-accent" : "bg-[#0a1a12] text-canvas-accent border-canvas-border")
+                        )}>
+                            ×{multiplier}
+                        </div>
+                    )}
+                    <div className="px-3.5 py-2 flex flex-col justify-center min-w-0">
+                        <div className="font-mono text-xs text-canvas-text truncate tracking-tight">
+                            {label}
+                        </div>
+                        {subtext && (
+                            <div className="font-mono text-[10px] text-canvas-muted truncate mt-0.5">
+                                {subtext}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Building the primary Pattern & Residual tree station... ---
+        const TreeGraph = ({ activeNodes }) => {
+            const isHl = (id) => activeNodes.includes('all') || activeNodes.includes(id);
+
+            const Edge = ({ from, to, warning }) => {
+                const hl = isHl(from) || isHl(to) || activeNodes.includes('all');
+                return (
+                    <path 
+                        d={`M ${from[0]} ${from[1]} C ${from[0]} ${(from[1]+to[1])/2}, ${to[0]} ${(from[1]+to[1])/2}, ${to[0]} ${to[1]}`} 
+                        className={cn("edge-line", hl ? (warning ? "active-warning" : "active") : "")}
+                    />
+                );
+            };
+
+            const root = [0, 0];
+            const rule = [-280, 140];
+            const except = [280, 140];
+            
+            const p1 = [-480, 290];
+            const p2 = [-280, 290];
+            const p3 = [-80, 290];
+            const p4 = [280, 290];
+
+            return (
+                <div className="absolute inset-0 pointer-events-none">
+                    <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }}>
+                        <Edge from={root} to={rule} />
+                        <Edge from={root} to={except} warning />
+                        <Edge from={rule} to={p1} />
+                        <Edge from={rule} to={p2} />
+                        <Edge from={rule} to={p3} />
+                        <Edge from={except} to={p4} warning />
+                        
+                        {[p1, p2, p3].flatMap((p, gIdx) => 
+                            [0, 1, 2, 3].map(cIdx => {
+                                const lx = p[0] + (cIdx - 1.5) * 42;
+                                return <Edge key={`e-${gIdx}-${cIdx}`} from={p} to={[lx, 470]} />;
+                            })
+                        )}
+                        {[0, 1, 2, 3].map(cIdx => {
+                            const lx = p4[0] + (cIdx - 1.5) * 42;
+                            return <Edge key={`e-3-${cIdx}`} from={p4} to={[lx, 470]} warning={cIdx === 3} />;
+                        })}
+                    </svg>
+
+                    <GraphNode id="node-root" x={root[0]} y={root[1]} width={280} label="Model M + Residual r" subtext="Sequence factorized into rule & residual" activeNodes={activeNodes} />
+                    <GraphNode id="node-rule" x={rule[0]} y={rule[1]} multiplier="3" label="Pattern: ABAC" subtext="Low description length L(M)" activeNodes={activeNodes} />
+                    <GraphNode id="node-except" x={except[0]} y={except[1]} multiplier="1" status="warning" label="Exception: ABAD" subtext="Residual exception L(x|M)" activeNodes={activeNodes} />
+                    
+                    <GraphNode id="node-p1" x={p1[0]} y={p1[1]} label="Seq 1: ABAC" activeNodes={activeNodes} />
+                    <GraphNode id="node-p2" x={p2[0]} y={p2[1]} label="Seq 2: ABAC" activeNodes={activeNodes} />
+                    <GraphNode id="node-p3" x={p3[0]} y={p3[1]} label="Seq 3: ABAC" activeNodes={activeNodes} />
+                    <GraphNode id="node-p4" x={p4[0]} y={p4[1]} status="warning" label="Seq 4: ABAD" activeNodes={activeNodes} />
+
+                    <div className="absolute">
+                        {['A','B','A','C', 'A','B','A','C', 'A','B','A','C', 'A','B','A','D'].map((char, i) => {
+                            const groupIdx = Math.floor(i/4);
+                            const charIdx = i % 4;
+                            const center = groupIdx === 0 ? p1[0] : groupIdx === 1 ? p2[0] : groupIdx === 2 ? p3[0] : p4[0];
+                            const x = center + (charIdx - 1.5) * 42;
+                            const y = 470;
+                            const isD = char === 'D';
+                            const id = `node-l${i}`;
+                            const isLeafActive = activeNodes.includes('all') || activeNodes.includes(id) || activeNodes.includes(`node-p${groupIdx+1}`);
+
+                            return (
+                                <div 
+                                    key={i} 
+                                    className={cn(
+                                        "spatial-node absolute w-8 h-9 flex items-center justify-center font-mono text-xs border rounded bg-canvas-node",
+                                        isLeafActive ? (isD ? "active-warning text-canvas-warning font-bold" : "active-accent text-canvas-accent font-bold") : "border-canvas-border text-canvas-muted",
+                                        !isLeafActive && activeNodes.length > 0 && !activeNodes.includes('all') && "dimmed"
+                                    )}
+                                    style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }}
+                                >
+                                    {char}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Building the dark semantic hierarchy station... ---
+        const SemanticGraph = ({ activeNodes }) => {
+            const isActive = activeNodes.includes('sem-all') || activeNodes.includes('all');
+            const dimClass = !isActive && activeNodes.length > 0 && !activeNodes.includes('all') ? "dimmed" : "";
+
+            const SemEdge = ({ from, to }) => (
+                <path 
+                    d={`M ${from[0]} ${from[1]} C ${from[0]} ${(from[1]+to[1])/2}, ${to[0]} ${(from[1]+to[1])/2}, ${to[0]} ${to[1]}`} 
+                    className={cn("edge-line", isActive ? "active" : "")}
+                />
+            );
+
+            const r = [0, -180];
+            const l1_1 = [-280, -60], l1_2 = [280, -60];
+            const l2_1 = [-420, 60], l2_2 = [-140, 60], l2_3 = [140, 60], l2_4 = [420, 60];
+            
+            const leaves = [
+                [-480, 180, "flight::tokyo"], [-360, 180, "hotel::shinjuku"],
+                [-200, 180, "ramen & dining"], [-80, 180, "plan::repeat"],
+                [80, 180, "daily::jogging"], [200, 180, "gear::running"],
+                [360, 180, "split::5km"], [480, 180, "target::42km"]
+            ];
+
+            return (
+                <div className="absolute inset-0 pointer-events-none" style={{ transform: 'translate(-1150px, 1050px)' }}>
+                    <div className={cn("transition-opacity duration-700", dimClass)}>
+                        
+                        <div className="absolute left-0 -top-[260px] -translate-x-1/2 flex items-center gap-3 px-4 py-1.5 rounded-full bg-canvas-node border border-canvas-border font-mono text-[11px] text-canvas-muted shadow-lg">
+                            <Lucide.Network size={13} className={isActive ? "text-canvas-accent" : "text-canvas-muted"} />
+                            <span>SEMANTIC COMPOSITION HIERARCHY</span>
+                            <span className="text-canvas-accent font-semibold">8:1 Factorization</span>
+                        </div>
+
+                        <svg className="absolute inset-0 w-full h-full" style={{ overflow: 'visible' }}>
+                            <SemEdge from={r} to={l1_1} />
+                            <SemEdge from={r} to={l1_2} />
+                            <SemEdge from={l1_1} to={l2_1} />
+                            <SemEdge from={l1_1} to={l2_2} />
+                            <SemEdge from={l1_2} to={l2_3} />
+                            <SemEdge from={l1_2} to={l2_4} />
+                            {leaves.map((l, i) => {
+                                const parent = i < 2 ? l2_1 : i < 4 ? l2_2 : i < 6 ? l2_3 : l2_4;
+                                return <SemEdge key={i} from={parent} to={[l[0], l[1]]} />;
+                            })}
+                        </svg>
+
+                        <GraphNode id="sem-r" x={r[0]} y={r[1]} width={340} multiplier="8" label="Tom: Tokyo Marathon Pursuit" subtext="Apex Concept · Invariant Narrative Model" activeNodes={activeNodes} />
+                        
+                        <GraphNode id="sem-l1-1" x={l1_1[0]} y={l1_1[1]} width={240} multiplier="4" label="Travel: Devotion to Tokyo" subtext="Geographic Invariant" activeNodes={activeNodes} />
+                        <GraphNode id="sem-l1-2" x={l1_2[0]} y={l1_2[1]} width={240} multiplier="4" label="Habit: Endurance Running" subtext="Behavioral Invariant" activeNodes={activeNodes} />
+                        
+                        <GraphNode id="sem-l2-1" x={l2_1[0]} y={l2_1[1]} width={160} multiplier="2" label="Trip Execution" activeNodes={activeNodes} />
+                        <GraphNode id="sem-l2-2" x={l2_2[0]} y={l2_2[1]} width={160} multiplier="2" label="City Affinity" activeNodes={activeNodes} />
+                        <GraphNode id="sem-l2-3" x={l2_3[0]} y={l2_3[1]} width={160} multiplier="2" label="Base Training" activeNodes={activeNodes} />
+                        <GraphNode id="sem-l2-4" x={l2_4[0]} y={l2_4[1]} width={160} multiplier="2" label="Race Objective" activeNodes={activeNodes} />
+
+                        {leaves.map((l, i) => (
+                            <div 
+                                key={i}
+                                className={cn(
+                                    "spatial-node absolute px-3 py-1.5 rounded bg-canvas-node border font-mono text-[11px] whitespace-nowrap shadow-sm",
+                                    isActive ? "border-canvas-accent text-canvas-accent font-medium" : "border-canvas-border text-canvas-muted"
+                                )}
+                                style={{ left: l[0], top: l[1], transform: 'translate(-50%, -50%)' }}
+                            >
+                                {l[2]}
+                            </div>
+                        ))}
+
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Building the dark temporal multi-scale memory station... ---
+        const TemporalTimeline = ({ activeNodes }) => {
+            const isActive = activeNodes.includes('temp-all') || activeNodes.includes('all');
+            const dimClass = !isActive && activeNodes.length > 0 && !activeNodes.includes('all') ? "dimmed" : "";
+
+            const tiers = [
+                { id: 'T4', label: 'Remote Past (Years)', factor: '32×', desc: 'Invariant Schemas', retention: 'Model: 98% | Residual: 2%', color: '#10b981', blocks: 1 },
+                { id: 'T3', label: 'Consolidated (Months)', factor: '8×', desc: 'Narrative Chunks', retention: 'Model: 85% | Residual: 15%', color: '#34d399', blocks: 2 },
+                { id: 'T2', label: 'Episodic (Weeks)', factor: '4×', desc: 'Event Sequences', retention: 'Model: 60% | Residual: 40%', color: '#f59e0b', blocks: 4 },
+                { id: 'T1', label: 'Recent (Days)', factor: '2×', desc: 'Salient Incidents', retention: 'Model: 35% | Residual: 65%', color: '#fbbf24', blocks: 8 },
+                { id: 'T0', label: 'Present (Minutes)', factor: '1×', desc: 'Sensory Buffer', retention: 'Full Fidelity | Zero Pruning', color: '#9ca3af', blocks: 16 }
+            ];
+
+            return (
+                <div className="absolute inset-0 pointer-events-none" style={{ transform: 'translate(1150px, 1050px)' }}>
+                    <div className={cn("w-[680px] bg-canvas-node border rounded-xl p-7 flex flex-col gap-6 -translate-x-1/2 -translate-y-1/2 transition-all duration-700 shadow-xl", 
+                        isActive ? "border-canvas-accent active-accent" : "border-canvas-border opacity-50",
+                        dimClass)}>
+                        
+                        <div className="flex items-center justify-between border-b border-canvas-border pb-4">
+                            <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-canvas-muted">
+                                <Lucide.Clock size={14} className={isActive ? "text-canvas-accent" : "text-canvas-muted"} />
+                                <span>TEMPORAL MULTI-RESOLUTION STORAGE</span>
+                            </div>
+                            <div className="font-mono text-[11px] text-canvas-accent">
+                                Lossy Invariant Preservation
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3.5">
+                            {tiers.map((t) => (
+                                <div key={t.id} className="flex flex-col gap-1.5">
+                                    <div className="flex justify-between items-center font-mono text-[11px]">
+                                        <div className="flex items-center gap-2 text-canvas-text">
+                                            <span className="text-canvas-muted">{t.id}</span>
+                                            <span>{t.label}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-canvas-muted text-[10px]">{t.retention}</span>
+                                            <span className="text-canvas-accent font-semibold">{t.factor}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-1.5 h-6 w-full items-center">
+                                        {Array.from({ length: t.blocks }).map((_, bIdx) => (
+                                            <div 
+                                                key={bIdx}
+                                                className={cn(
+                                                    "h-full rounded-sm border transition-all duration-700 flex items-center justify-center font-mono text-[9px]",
+                                                    isActive ? "bg-opacity-20" : "bg-opacity-5"
+                                                )}
+                                                style={{ 
+                                                    flex: 1,
+                                                    borderColor: isActive ? t.color : '#262626',
+                                                    backgroundColor: isActive ? t.color : '#141414',
+                                                    color: t.color
+                                                }}
+                                            >
+                                                {t.blocks <= 4 && t.desc}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="pt-2 border-t border-canvas-border flex justify-between font-mono text-[10px] text-canvas-muted">
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-canvas-accent"></span>
+                                <span>High Abstraction (Residual Pruned)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#9ca3af]"></span>
+                                <span>Sensory Fidelity (t = 0)</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Constructing station dashboard frames... ---
+        const Frame = ({ id, x, y, width, height, title, children, activeNodes, icon: Icon }) => {
+            const isActive = activeNodes.includes(id) || activeNodes.includes('all');
+            return (
+                <div 
+                    className={cn(
+                        "spatial-node absolute bg-canvas-node/95 backdrop-blur-md border rounded-xl p-6 flex flex-col overflow-hidden",
+                        isActive ? "active-accent shadow-2xl scale-100" : "border-canvas-border shadow-lg scale-95 opacity-50",
+                        !isActive && activeNodes.length > 0 && !activeNodes.includes('all') && "dimmed"
+                    )}
+                    style={{ left: x, top: y, width, height, transform: 'translate(-50%, -50%)' }}
+                >
+                    <div className="flex items-center justify-between font-mono text-xs tracking-wider text-canvas-muted uppercase mb-4 border-b border-canvas-border pb-3">
+                        <div className="flex items-center gap-2.5">
+                            {Icon && <Icon size={15} className={isActive ? "text-canvas-accent" : "text-canvas-muted"} />}
+                            <span className={isActive ? "text-white" : ""}>{title}</span>
+                        </div>
+                        <span className="text-[10px] text-canvas-accent">Unit Bound Station</span>
+                    </div>
+                    <div className="flex-1 min-h-0 relative z-10">
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Rendering full conduit network including user schema wires... ---
+        const FullConduitNetwork = ({ activeNodes, artifacts, activeSection }) => {
+            const isConnActive = (id) => activeNodes.includes(id) || activeNodes.includes('all');
+
+            return (
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
+                    {/* Fixed Inter-Station Arteries */}
+                    <path d="M -150 0 C -600 0, -850 100, -970 200" className={cn("conduit-line", isConnActive('conduit-entropy') && "active")} />
+                    <path d="M 150 0 C 600 0, 850 100, 970 200" className={cn("conduit-line", isConnActive('conduit-mdl') && "active")} />
+                    <path d="M 0 540 L 0 680" className={cn("conduit-line", isConnActive('conduit-pred') && "active")} />
+                    <path d="M -300 220 C -650 350, -900 600, -1150 780" className={cn("conduit-line", isConnActive('conduit-sem') && "active")} />
+                    <path d="M 320 840 C 600 840, 750 900, 850 980" className={cn("conduit-line", isConnActive('conduit-temp') && "active")} />
+                    <path d="M -600 1050 C -100 1300, 200 1300, 700 1150" className={cn("conduit-line", isConnActive('conduit-sem-temp') && "active")} />
+
+                    {/* Dynamic Conduits linking User Artifacts to Core Lesson Stations */}
+                    {artifacts.map((art) => {
+                        if (!art.linkedSectionId) return null;
+                        const targetPos = STATION_COORDINATES[art.linkedSectionId];
+                        if (!targetPos) return null;
+
+                        const isLinkedActive = activeSection === art.linkedSectionId;
+                        const startX = art.x;
+                        const startY = art.y;
+                        const targetX = targetPos.x;
+                        const targetY = targetPos.y;
+
+                        const midX = (startX + targetX) / 2;
+                        const midY = (startY + targetY) / 2;
+
+                        return (
+                            <g key={`user-wire-${art.id}`}>
+                                <path
+                                    d={`M ${startX} ${startY} Q ${midX} ${startY - 40}, ${targetX} ${targetY}`}
+                                    className={cn(
+                                        "conduit-line transition-all duration-700",
+                                        isLinkedActive ? "active" : "opacity-30"
+                                    )}
+                                    style={{
+                                        stroke: isLinkedActive 
+                                            ? (art.color === 'purple' ? '#a855f7' : art.color === 'warning' ? '#f59e0b' : '#10b981')
+                                            : '#262626',
+                                        strokeWidth: isLinkedActive ? 2.5 : 1.2
+                                    }}
+                                />
+                                {isLinkedActive && (
+                                    <circle cx={startX} cy={startY} r="4" fill="#10b981" className="animate-pulse" />
+                                )}
+                            </g>
+                        );
+                    })}
+                </svg>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Building draggable and interactive user artifacts... ---
+        const UserArtifact = ({ artifact, onDragStart, onOpenSettings }) => {
+            const activeSection = useStore(s => s.activeSection);
+            const isBoundToActive = activeSection === artifact.linkedSectionId;
+
+            const colorClasses = {
+                accent: isBoundToActive ? 'border-canvas-accent shadow-[0_0_25px_rgba(16,185,129,0.25)]' : 'border-canvas-border hover:border-canvas-accent/50',
+                warning: isBoundToActive ? 'border-canvas-warning shadow-[0_0_25px_rgba(245,158,11,0.25)]' : 'border-canvas-border hover:border-canvas-warning/50',
+                purple: isBoundToActive ? 'border-canvas-purple shadow-[0_0_25px_rgba(168,85,247,0.25)]' : 'border-canvas-border hover:border-canvas-purple/50',
+            }[artifact.color || 'accent'];
+
+            if (artifact.type === 'rect') {
+                return (
+                    <div
+                        className={cn(
+                            "absolute rounded-xl border-2 border-dashed bg-black/40 backdrop-blur-xs flex flex-col p-4 transition-all duration-300 pointer-events-auto",
+                            colorClasses
+                        )}
+                        style={{
+                            left: artifact.x,
+                            top: artifact.y,
+                            width: artifact.w,
+                            height: artifact.h,
+                            transform: 'translate(-50%, -50%)',
+                        }}
+                    >
+                        <div 
+                            className="flex items-center justify-between pb-2 border-b border-white/5 cursor-grab active:cursor-grabbing"
+                            onPointerDown={(e) => onDragStart(e, artifact)}
+                        >
+                            <span className="font-mono text-xs uppercase tracking-wider text-canvas-muted truncate">
+                                {artifact.title}
+                            </span>
+                            <div className="flex items-center gap-1.5 pointer-events-auto">
+                                <button
+                                    onClick={() => onOpenSettings(artifact.id)}
+                                    className="p-1 rounded hover:bg-white/10 text-canvas-muted hover:text-white transition-colors"
+                                    title="Link Schema / Configure"
+                                >
+                                    <Lucide.Settings2 size={13} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 flex items-center justify-center font-mono text-xs text-canvas-muted/80 text-center p-2 select-none pointer-events-none">
+                            {artifact.content}
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div
+                    className={cn(
+                        "absolute rounded-lg border bg-canvas-node/95 shadow-xl flex flex-col overflow-hidden transition-all duration-300 pointer-events-auto",
+                        colorClasses
+                    )}
+                    style={{
+                        left: artifact.x,
+                        top: artifact.y,
+                        width: artifact.w,
+                        minHeight: artifact.h,
+                        transform: 'translate(-50%, -50%)',
+                    }}
+                >
+                    {/* Header with Drag Handle & Settings */}
+                    <div 
+                        className="px-3 py-2 bg-[#121212] border-b border-canvas-border flex items-center justify-between cursor-grab active:cursor-grabbing select-none"
+                        onPointerDown={(e) => onDragStart(e, artifact)}
+                    >
+                        <div className="flex items-center gap-2 min-w-0">
+                            {artifact.type === 'note' && <Lucide.FileText size={13} className="text-canvas-accent flex-shrink-0" />}
+                            {artifact.type === 'image' && <Lucide.Image size={13} className="text-canvas-purple flex-shrink-0" />}
+                            <span className="font-mono text-xs font-medium text-canvas-text truncate">
+                                {artifact.title}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => onOpenSettings(artifact.id)}
+                                className="p-1 rounded hover:bg-[#222] text-canvas-muted hover:text-white transition-colors"
+                                title="Link Schema / Settings"
+                            >
+                                <Lucide.Settings2 size={13} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-3 flex-1 flex flex-col font-mono text-xs">
+                        {artifact.type === 'note' && (
+                            <p className="text-canvas-muted leading-relaxed whitespace-pre-wrap select-text">
+                                {artifact.content}
+                            </p>
+                        )}
+                        {artifact.type === 'image' && (
+                            <div className="w-full h-full flex items-center justify-center overflow-hidden rounded bg-black">
+                                {artifact.content ? (
+                                    <img src={artifact.content} alt={artifact.title} className="w-full h-auto object-cover max-h-[220px]" />
+                                ) : (
+                                    <div className="text-canvas-muted py-6">No image loaded</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer Schema Link Indicator */}
+                    {artifact.linkedSectionId && (
+                        <div className="px-3 py-1.5 bg-[#0e0e0e] border-t border-canvas-border flex items-center justify-between font-mono text-[10px]">
+                            <span className="text-canvas-muted">Bound to:</span>
+                            <span className={cn(
+                                "font-medium truncate max-w-[130px]",
+                                isBoundToActive ? "text-canvas-accent" : "text-canvas-muted"
+                            )}>
+                                {STATION_COORDINATES[artifact.linkedSectionId]?.label || artifact.linkedSectionId}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Modal dialog for configuring artifacts and linking lessons... ---
+        const ArtifactSettingsModal = () => {
+            const { configuredArtifactId, setConfiguredArtifactId, artifacts, updateArtifact, removeArtifact, setActiveSection } = useStore();
+            const artifact = artifacts.find(a => a.id === configuredArtifactId);
+
+            if (!artifact) return null;
+
+            return (
+                <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="w-full max-w-md bg-canvas-node border border-canvas-border rounded-xl p-6 shadow-2xl flex flex-col gap-5">
+                        
+                        <div className="flex items-center justify-between border-b border-canvas-border pb-3">
+                            <div className="flex items-center gap-2">
+                                <Lucide.Settings2 size={16} className="text-canvas-accent" />
+                                <h3 className="font-mono text-sm font-semibold text-white">Artifact Schema Configuration</h3>
+                            </div>
+                            <button 
+                                onClick={() => setConfiguredArtifactId(null)}
+                                className="p-1 rounded text-canvas-muted hover:text-white hover:bg-[#1a1a1a]"
+                            >
+                                <Lucide.X size={16} />
+                            </button>
+                        </div>
+
+                        {/* Title Input */}
+                        <div className="flex flex-col gap-1.5 font-mono text-xs">
+                            <label className="text-canvas-muted">Title / Identifier</label>
+                            <input
+                                type="text"
+                                value={artifact.title}
+                                onChange={(e) => updateArtifact(artifact.id, { title: e.target.value })}
+                                className="bg-[#121212] border border-canvas-border rounded px-3 py-2 text-white focus:outline-none focus:border-canvas-accent"
+                            />
+                        </div>
+
+                        {/* Note Content / Frame Label */}
+                        {artifact.type !== 'image' && (
+                            <div className="flex flex-col gap-1.5 font-mono text-xs">
+                                <label className="text-canvas-muted">Content / Text</label>
+                                <textarea
+                                    rows={3}
+                                    value={artifact.content}
+                                    onChange={(e) => updateArtifact(artifact.id, { content: e.target.value })}
+                                    className="bg-[#121212] border border-canvas-border rounded px-3 py-2 text-white focus:outline-none focus:border-canvas-accent resize-none"
+                                />
+                            </div>
+                        )}
+
+                        {/* Schema Lesson / Unit Connector */}
+                        <div className="flex flex-col gap-1.5 font-mono text-xs">
+                            <div className="flex justify-between items-center">
+                                <label className="text-canvas-muted">Connect with Lesson Unit</label>
+                                <span className="text-[10px] text-canvas-accent">Active Wire Sync</span>
+                            </div>
+                            <select
+                                value={artifact.linkedSectionId || ''}
+                                onChange={(e) => updateArtifact(artifact.id, { linkedSectionId: e.target.value })}
+                                className="bg-[#121212] border border-canvas-border rounded px-3 py-2 text-white focus:outline-none focus:border-canvas-accent"
+                            >
+                                {ARTICLE.map((sec) => (
+                                    <option key={sec.id} value={sec.id}>
+                                        {sec.title}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-[10px] text-canvas-muted mt-1 leading-normal">
+                                Connects a physical data conduit wire between this artifact and the selected concept on the canvas.
+                            </p>
+                        </div>
+
+                        {/* Color Accent */}
+                        <div className="flex flex-col gap-1.5 font-mono text-xs">
+                            <label className="text-canvas-muted">Theme Accent</label>
+                            <div className="flex gap-2">
+                                {[
+                                    { id: 'accent', label: 'Emerald', bg: 'bg-[#10b981]' },
+                                    { id: 'warning', label: 'Amber', bg: 'bg-[#f59e0b]' },
+                                    { id: 'purple', label: 'Purple', bg: 'bg-[#a855f7]' },
+                                ].map((c) => (
+                                    <button
+                                        key={c.id}
+                                        onClick={() => updateArtifact(artifact.id, { color: c.id })}
+                                        className={cn(
+                                            "flex-1 py-1.5 rounded border text-xs flex items-center justify-center gap-1.5 transition-all",
+                                            artifact.color === c.id ? "border-white text-white font-bold" : "border-canvas-border text-canvas-muted"
+                                        )}
+                                    >
+                                        <span className={cn("w-2 h-2 rounded-full", c.bg)} />
+                                        {c.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Footer Controls */}
+                        <div className="flex justify-between items-center pt-3 border-t border-canvas-border font-mono text-xs">
+                            <button
+                                onClick={() => removeArtifact(artifact.id)}
+                                className="flex items-center gap-1 text-red-400 hover:text-red-300 py-1"
+                            >
+                                <Lucide.Trash2 size={13} />
+                                Delete
+                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        if (artifact.linkedSectionId) setActiveSection(artifact.linkedSectionId);
+                                        setConfiguredArtifactId(null);
+                                    }}
+                                    className="px-3 py-1.5 rounded bg-white/10 hover:bg-white/20 text-white font-medium"
+                                >
+                                    Jump to Unit
+                                </button>
+                                <button
+                                    onClick={() => setConfiguredArtifactId(null)}
+                                    className="px-4 py-1.5 rounded bg-canvas-accent text-black font-semibold hover:bg-canvas-accent/90"
+                                >
+                                    Save & Close
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Assembling spatial world layout and charts... ---
+        const SpatialWorld = () => {
+            const activeSection = useStore(s => s.activeSection);
+            const artifacts = useStore(s => s.artifacts);
+            const updateArtifact = useStore(s => s.updateArtifact);
+            const setConfiguredArtifactId = useStore(s => s.setConfiguredArtifactId);
+            const activeNodes = HIGHLIGHTS[activeSection] || [];
+
+            // Artifact dragging state in world coordinates
+            const dragRef = useRef(null);
+
+            const handleArtifactDragStart = (e, art) => {
+                e.stopPropagation();
+                const cam = useStore.getState().camera;
+                dragRef.current = {
+                    id: art.id,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    origX: art.x,
+                    origY: art.y,
+                    zoom: cam.z
+                };
+
+                const onPointerMove = (moveEvent) => {
+                    if (!dragRef.current) return;
+                    const dx = (moveEvent.clientX - dragRef.current.startX) / dragRef.current.zoom;
+                    const dy = (moveEvent.clientY - dragRef.current.startY) / dragRef.current.zoom;
+                    updateArtifact(dragRef.current.id, {
+                        x: Math.round(dragRef.current.origX + dx),
+                        y: Math.round(dragRef.current.origY + dy)
+                    });
+                };
+
+                const onPointerUp = () => {
+                    dragRef.current = null;
+                    window.removeEventListener('pointermove', onPointerMove);
+                    window.removeEventListener('pointerup', onPointerUp);
+                };
+
+                window.addEventListener('pointermove', onPointerMove);
+                window.addEventListener('pointerup', onPointerUp);
+            };
+
+            return (
+                <div className="absolute inset-0 origin-center">
+                    
+                    {/* Inter-station and user schema conduit wires */}
+                    <FullConduitNetwork activeNodes={activeNodes} artifacts={artifacts} activeSection={activeSection} />
+
+                    {/* Standard Architecture Stations */}
+                    <TreeGraph activeNodes={activeNodes} />
+                    <SemanticGraph activeNodes={activeNodes} />
+                    <TemporalTimeline activeNodes={activeNodes} />
+
+                    {/* Shannon Entropy Frame */}
+                    <Frame id="frame-entropy" x={-1250} y={200} width={560} height={390} title="SHANNON BOUND :: Irreducible Entropy" icon={Lucide.Waves} activeNodes={activeNodes}>
+                        <div className="h-full flex flex-col">
+                            <div className="flex-1 min-h-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={ENTROPY_DATA} margin={{ top: 15, right: 25, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorH" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.35}/>
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid stroke="#1a1a1a" vertical={false} strokeDasharray="3 3" />
+                                        <XAxis dataKey="p" type="number" tick={{ fill: '#6b7280', fontSize: 10, fontFamily: 'monospace' }} domain={[0, 1]} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontFamily: 'monospace' }} domain={[0, 1]} axisLine={false} tickLine={false} />
+                                        <ReferenceLine x={0.5} stroke="#3b82f6" strokeDasharray="3 3" />
+                                        <Area type="monotone" dataKey="H" stroke="#10b981" fillOpacity={1} fill="url(#colorH)" strokeWidth={2.5} isAnimationActive={false} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-canvas-border flex justify-between font-mono text-[11px]">
+                                <div className="text-canvas-muted">p = 0.50 : Peak uncertainty (1.00 bit)</div>
+                                <div className="text-canvas-accent">p → 1.00 : Maximal predictability</div>
+                            </div>
+                        </div>
+                    </Frame>
+
+                    {/* MDL Frame */}
+                    <Frame id="frame-mdl" x={1250} y={200} width={560} height={390} title="MDL PRINCIPLE :: Capacity vs Residual" icon={Lucide.SlidersHorizontal} activeNodes={activeNodes}>
+                        <div className="h-full flex flex-col">
+                            <div className="flex-1 min-h-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={MDL_DATA} margin={{ top: 15, right: 25, left: -20, bottom: 15 }}>
+                                        <CartesianGrid stroke="#1a1a1a" vertical={false} strokeDasharray="3 3" />
+                                        <XAxis dataKey="k" tick={{ fill: '#6b7280', fontSize: 10, fontFamily: 'monospace' }} 
+                                            label={{ value: 'Model Complexity k', position: 'bottom', offset: 0, fill: '#6b7280', fontSize: 10, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{ fill: '#6b7280', fontSize: 10, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
+                                        <Line type="monotone" dataKey="data" name="Residual L(D|M)" stroke="#6b7280" strokeWidth={1.8} dot={false} isAnimationActive={false} />
+                                        <Line type="monotone" dataKey="model" name="Model Cost L(M)" stroke="#f59e0b" strokeWidth={1.8} dot={false} isAnimationActive={false} />
+                                        <Line type="monotone" dataKey="total" name="Total Code Length" stroke="#10b981" strokeWidth={3} 
+                                            dot={{ r: 4, fill: '#040404', stroke: '#10b981', strokeWidth: 2 }} activeDot={{ r: 6, fill: '#10b981' }} isAnimationActive={false} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-canvas-border flex justify-between font-mono text-[11px]">
+                                <div className="text-canvas-muted">k = 2 achieves minimum L(M) + L(D|M)</div>
+                                <div className="text-canvas-accent">Optimal Generalization Point</div>
+                            </div>
+                        </div>
+                    </Frame>
+
+                    {/* Next-Symbol Prediction Frame */}
+                    <Frame id="frame-pred" x={0} y={840} width={650} height={330} title="PREDICTION BY COMPRESSION :: Minimum Addition" icon={Lucide.Terminal} activeNodes={activeNodes}>
+                        <div className="flex flex-col h-full justify-between py-1">
+                            <div className="font-mono text-xs text-canvas-muted px-4 py-2.5 rounded bg-[#0e0e0e] border border-canvas-border flex items-center justify-between">
+                                <span>Context Window: <strong className="text-white tracking-wider ml-1">ABAC ABAC ABAC</strong></span>
+                                <span className="text-canvas-accent font-bold">Predicting t+1</span>
+                            </div>
+                            
+                            <div className="space-y-3 px-1 my-auto">
+                                {PRED_DATA.map((d) => (
+                                    <div key={d.sym} className="flex items-center gap-4">
+                                        <div className="w-8 h-8 flex items-center justify-center font-mono font-bold text-xs rounded border"
+                                            style={{ 
+                                                backgroundColor: d.sym === 'A' ? '#10b981' : '#121212', 
+                                                color: d.sym === 'A' ? '#000000' : '#888888',
+                                                borderColor: d.sym === 'A' ? '#10b981' : '#262626'
+                                            }}>
+                                            {d.sym}
+                                        </div>
+                                        <div className="flex-1 h-2 bg-[#121212] rounded-full overflow-hidden border border-[#222]">
+                                            <div className="h-full transition-all duration-700 ease-out" 
+                                                style={{ 
+                                                    width: activeNodes.includes('frame-pred') || activeNodes.includes('all') ? `${d.prob * 100}%` : '0%',
+                                                    backgroundColor: d.sym === 'A' ? '#10b981' : '#4b5563'
+                                                }} />
+                                        </div>
+                                        <div className="w-32 text-right font-mono text-xs flex flex-col justify-center">
+                                            <div className={d.sym === 'A' ? "text-white font-bold" : "text-gray-400"}>{(d.prob * 100).toFixed(0)}% prob</div>
+                                            <div className="text-canvas-muted text-[10px]">+{d.bits.toFixed(2)} bits</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="text-[11px] font-mono text-canvas-muted border-t border-canvas-border pt-2 flex justify-between">
+                                <span>Shortest incremental code length</span>
+                                <span className="text-canvas-accent">Symbol 'A' minimizes surprise</span>
+                            </div>
+                        </div>
+                    </Frame>
+
+                    {/* User-created interactive artifacts */}
+                    {artifacts.map((art) => (
+                        <UserArtifact 
+                            key={art.id} 
+                            artifact={art} 
+                            onDragStart={handleArtifactDragStart}
+                            onOpenSettings={setConfiguredArtifactId}
+                        />
+                    ))}
+
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Implementing smooth 1-to-1 natural pan and zoom canvas... ---
+        const InfiniteCanvas = () => {
+            const containerRef = useRef(null);
+            const { camera, setCameraDirect, isManualNavigation, addArtifact, setActiveSection } = useStore();
+            const fileInputRef = useRef(null);
+
+            const [isDragging, setIsDragging] = useState(false);
+            const dragStartRef = useRef({ x: 0, y: 0, camX: 0, camY: 0 });
+
+            // Natural Anchored Zoom on Wheel
+            const handleWheel = useCallback((e) => {
+                e.preventDefault();
+                const container = containerRef.current;
+                if (!container) return;
+
+                const rect = container.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const cx = rect.width / 2;
+                const cy = rect.height / 2;
+
+                const curCam = useStore.getState().camera;
+                const zoomFactor = Math.exp(-e.deltaY * 0.002);
+                const nextZ = Math.min(Math.max(0.15, curCam.z * zoomFactor), 4.0);
+
+                // Anchor world point under mouse
+                const worldX = curCam.x + (mouseX - cx) / curCam.z;
+                const worldY = curCam.y + (mouseY - cy) / curCam.z;
+
+                const nextX = worldX - (mouseX - cx) / nextZ;
+                const nextY = worldY - (mouseY - cy) / nextZ;
+
+                setCameraDirect({ x: nextX, y: nextY, z: nextZ });
+            }, [setCameraDirect]);
+
+            useEffect(() => {
+                const el = containerRef.current;
+                if (el) {
+                    el.addEventListener('wheel', handleWheel, { passive: false });
+                    return () => el.removeEventListener('wheel', handleWheel);
+                }
+            }, [handleWheel]);
+
+            // Drag to Pan
+            const handlePointerDown = (e) => {
+                // Ignore if clicked on an artifact or toolbar
+                if (e.target.closest('.pointer-events-auto') || e.target.closest('button') || e.target.closest('input')) return;
+                
+                setIsDragging(true);
+                dragStartRef.current = {
+                    x: e.clientX,
+                    y: e.clientY,
+                    camX: camera.x,
+                    camY: camera.y
+                };
+            };
+
+            const handlePointerMove = (e) => {
+                if (!isDragging) return;
+                const dx = (e.clientX - dragStartRef.current.x) / camera.z;
+                const dy = (e.clientY - dragStartRef.current.y) / camera.z;
+                setCameraDirect({
+                    x: dragStartRef.current.camX - dx,
+                    y: dragStartRef.current.camY - dy,
+                    z: camera.z
+                });
+            };
+
+            const handlePointerUp = () => {
+                setIsDragging(false);
+            };
+
+            // Image Upload Handler
+            const handleImageUpload = (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const dataUrl = event.target?.result;
+                    if (dataUrl) {
+                        addArtifact('image', {
+                            title: file.name.substring(0, 16),
+                            content: dataUrl,
+                            w: 280,
+                            h: 220
+                        });
+                    }
+                };
+                reader.readAsDataURL(file);
+                e.target.value = '';
+            };
+
+            return (
+                <div 
+                    ref={containerRef}
+                    className={cn(
+                        "flex-1 h-full relative overflow-hidden tldraw-bg select-none",
+                        isDragging ? "cursor-grabbing" : "cursor-grab"
+                    )}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerLeave={handlePointerUp}
+                >
+                    {/* Floating Artifact Creation Toolbar */}
+                    <div className="absolute top-6 left-6 z-40 flex items-center gap-1.5 p-1.5 rounded-lg bg-canvas-node/90 border border-canvas-border shadow-2xl backdrop-blur-md">
+                        <button
+                            onClick={() => addArtifact('note')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded hover:bg-white/10 text-canvas-text font-mono text-xs transition-colors"
+                            title="Add Note"
+                        >
+                            <Lucide.FileText size={14} className="text-canvas-accent" />
+                            <span>Add Note</span>
+                        </button>
+                        <button
+                            onClick={() => addArtifact('rect')}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded hover:bg-white/10 text-canvas-text font-mono text-xs transition-colors"
+                            title="Add Frame / Rectangle"
+                        >
+                            <Lucide.Square size={14} className="text-canvas-purple" />
+                            <span>Add Frame</span>
+                        </button>
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded hover:bg-white/10 text-canvas-text font-mono text-xs transition-colors"
+                            title="Upload Image"
+                        >
+                            <Lucide.ImagePlus size={14} className="text-canvas-warning" />
+                            <span>Image</span>
+                        </button>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
+                        />
+                        <div className="w-px h-5 bg-canvas-border mx-1" />
+                        <button
+                            onClick={() => setActiveSection('sec-intro')}
+                            className="px-2.5 py-1.5 rounded hover:bg-white/10 text-canvas-muted hover:text-white font-mono text-xs transition-colors"
+                            title="Reset to Root"
+                        >
+                            <Lucide.RotateCcw size={13} />
+                        </button>
+                    </div>
+
+                    {/* Canvas Projection Layer with hardware CSS transform */}
+                    <div 
+                        className="absolute inset-0 origin-top-left will-change-transform pointer-events-none"
+                        style={{
+                            transform: `translate(50vw, 50vh) scale(${camera.z}) translate(${-camera.x}px, ${-camera.y}px)`,
+                            transition: isManualNavigation ? 'none' : 'transform 0.9s cubic-bezier(0.16, 1, 0.3, 1)',
+                            transformOrigin: '0 0'
+                        }}
+                    >
+                        <SpatialWorld />
+                    </div>
+
+                    {/* Artifact Configuration Modal */}
+                    <ArtifactSettingsModal />
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Constructing narrative article sidebar... ---
+        const ArticlePane = () => {
+            const { setActiveSection, activeSection } = useStore();
+
+            useEffect(() => {
+                const observer = new IntersectionObserver((entries) => {
+                    let maxIntersection = 0;
+                    let bestId = null;
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting && entry.intersectionRatio > maxIntersection) {
+                            maxIntersection = entry.intersectionRatio;
+                            bestId = entry.target.id;
+                        }
+                    });
+                    if (bestId) setActiveSection(bestId);
+                }, { rootMargin: '-20% 0px -40% 0px', threshold: Array.from({ length: 20 }, (_, i) => i / 20) });
+
+                ARTICLE.forEach(sec => {
+                    const el = document.getElementById(sec.id);
+                    if (el) observer.observe(el);
+                });
+                return () => observer.disconnect();
+            }, [setActiveSection]);
+
+            return (
+                <div className="w-full md:w-[480px] lg:w-[540px] flex-shrink-0 h-full overflow-y-auto bg-article-bg border-r border-article-border relative z-20 gradient-fade-bottom">
+                    <div className="p-12 pb-[65vh] prose">
+                        <div className="mb-24 pt-12">
+                            <h1 className="text-3xl font-bold text-white mb-4 tracking-tight leading-tight">
+                                Compression is<br/>
+                                <span className="text-canvas-accent">Intelligence</span>
+                            </h1>
+                            <div className="text-[11px] font-mono text-canvas-muted flex items-center gap-3 uppercase tracking-widest border border-canvas-border inline-flex px-3.5 py-1.5 rounded-md bg-canvas-node shadow-sm">
+                                <span className="w-2 h-2 rounded-full bg-canvas-accent animate-pulse"></span>
+                                Unified Spatial Schema v2.3
+                            </div>
+                        </div>
+
+                        {ARTICLE.map((sec) => (
+                            <section 
+                                key={sec.id} 
+                                id={sec.id} 
+                                className={cn(
+                                    "mb-32 transition-all duration-700",
+                                    activeSection === sec.id ? "opacity-100 transform translate-x-0" : "opacity-25 transform -translate-x-4"
+                                )}
+                            >
+                                <h2 className="flex items-center gap-3">
+                                    <span className="w-5 h-px bg-canvas-border inline-block"></span>
+                                    {sec.title}
+                                </h2>
+                                {sec.text.map((p, i) => <p key={i}>{p}</p>)}
+                                {sec.math && (
+                                    <div className="math-block">
+                                        {sec.math}
+                                    </div>
+                                )}
+                            </section>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- STREAMING_CHUNK:Mounting master application... ---
+        const App = () => {
+            return (
+                <div className="flex w-screen h-screen bg-black overflow-hidden font-sans">
+                    <ArticlePane />
+                    <InfiniteCanvas />
+                    
+                    <div className="absolute bottom-6 right-6 bg-canvas-node/90 backdrop-blur border border-canvas-border text-canvas-muted text-[11px] font-mono px-3.5 py-2 rounded-md pointer-events-none z-50 flex items-center gap-2.5 shadow-xl hidden md:flex">
+                        <Lucide.MousePointerClick size={14} className="text-canvas-accent" />
+                        Pan: Drag • Zoom: Wheel • Add custom schema notes via top toolbar
+                    </div>
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

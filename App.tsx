@@ -7,7 +7,9 @@ import { InteractionModal } from './components/InteractionModal';
 import { GenerationOverlay } from './components/GenerationOverlay';
 import { GraphView } from './components/GraphView';
 import { DatabaseView } from './components/DatabaseView';
+import { LessonTemplateGallery } from './components/LessonTemplateGallery';
 import { getRun, syncRun } from './services/dbService';
+import { DEFAULT_LESSON_TEMPLATE } from './services/prompts/initialLessonPrompt';
 import { ArrowRight, Database } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -25,6 +27,7 @@ const App: React.FC = () => {
   const [workspaceView, setWorkspaceView] = useState<'lesson' | 'graph' | 'db'>('lesson');
   const [isLoading, setIsLoading] = useState(false);
   const [initialTopic, setInitialTopic] = useState('');
+  const [selectedTemplateFilename, setSelectedTemplateFilename] = useState(DEFAULT_LESSON_TEMPLATE);
 
   // Interaction State
   const [pendingSelection, setPendingSelection] = useState<SelectionEvent | null>(null);
@@ -41,7 +44,7 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       const topic = initialTopic.trim();
-      const html = await generateInitialLesson(topic);
+      const html = await generateInitialLesson(topic, selectedTemplateFilename);
       const newId = createGenerationId({});
       const newNode: PageNode = {
         id: newId,
@@ -72,16 +75,22 @@ const App: React.FC = () => {
     setPendingSelection(selection);
   };
 
-  const handleInteractionSubmit = async (prompt: string) => {
+  const handleInteractionSubmit = async (prompt: string, templateFilename: string) => {
     if (!currentNode || !pendingSelection) return;
 
     setIsLoading(true);
+    setSelectedTemplateFilename(templateFilename);
     const selection = pendingSelection;
     setPendingSelection(null);
     setMode('browse'); // Reset mode while loading
 
     try {
-      const newHtml = await generateFollowUpLesson(currentNode.topic, selection.htmlSnippet, prompt);
+      const newHtml = await generateFollowUpLesson(
+        currentNode.topic,
+        selection.htmlSnippet,
+        prompt,
+        templateFilename
+      );
       const newId = createGenerationId(nodeMap);
       const newNode: PageNode = {
         id: newId,
@@ -275,14 +284,14 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        <div className="relative w-full max-w-xl space-y-10 text-center">
+        <div className="relative w-full max-w-5xl space-y-8 py-8 text-center">
           <div className="space-y-6">
             <h1 className="text-5xl font-semibold tracking-[-0.05em] text-[#e2e8f0] sm:text-6xl">
               GenLearn
             </h1>
           </div>
 
-          <form onSubmit={handleInitialSubmit} className="relative rounded-full border border-[#2a2a35] bg-[#121217] p-2 shadow-[0_24px_80px_rgba(0,0,0,0.38)] focus-within:border-[#00e599]/50">
+          <form onSubmit={handleInitialSubmit} className="relative mx-auto w-full max-w-3xl rounded-full border border-[#2a2a35] bg-[#121217] p-2 text-left shadow-[0_24px_80px_rgba(0,0,0,0.38)] focus-within:border-[#00e599]/50">
             <input
               type="text"
               value={initialTopic}
@@ -299,6 +308,12 @@ const App: React.FC = () => {
               <ArrowRight size={19} />
             </button>
           </form>
+
+          <LessonTemplateGallery
+            selectedFilename={selectedTemplateFilename}
+            onSelect={setSelectedTemplateFilename}
+            disabled={isLoading}
+          />
         </div>
       </div>
     );
@@ -339,6 +354,7 @@ const App: React.FC = () => {
           selection={pendingSelection}
           onClose={() => setPendingSelection(null)}
           onSubmit={handleInteractionSubmit}
+          initialTemplateFilename={selectedTemplateFilename}
           existingBranches={getExistingBranchesForSelection()}
           onNavigateToBranch={navigateToBranch}
           onDeleteBranch={handleDeleteBranch}
