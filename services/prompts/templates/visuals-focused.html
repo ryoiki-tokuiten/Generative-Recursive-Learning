@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motivated First-Principles Explanation</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        serif: ['Lora', 'serif']
+                    },
+                    colors: {
+                        math: {
+                            unitCircle: '#D97757',
+                            circle2: '#3B9B96',
+                            hyperbola: '#9B7EDE',
+                            dA: '#E09132',
+                            dH: '#D46387',
+                            result: '#46A775',
+                            sharedZ: '#5B9BD5'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-canvas: #141413;
+            --text-main: #E6E4DD;
+            --text-heading: #F5F4EF;
+            --text-muted: #96938B;
+            --glass-bg: #1C1B19;
+            --glass-border: rgba(240, 239, 234, 0.14);
+            --glass-shadow: 6px 0 32px rgba(0, 0, 0, 0.45);
+            --header-bg: #22211E;
+            --header-border: rgba(240, 239, 234, 0.1);
+            --subbox-bg: #151412;
+            --subbox-border: rgba(240, 239, 234, 0.11);
+            --scrollbar-bg: rgba(0, 0, 0, 0.18);
+            --scrollbar-thumb: rgba(240, 239, 234, 0.18);
+            --scrollbar-thumb-hover: rgba(240, 239, 234, 0.3);
+        }
+        body.light-mode {
+            --bg-canvas: #FAF8F5;
+            --text-main: #2D2C29;
+            --text-heading: #141413;
+            --text-muted: #66645E;
+            --glass-bg: #F2EFE9;
+            --glass-border: rgba(20, 20, 19, 0.14);
+            --glass-shadow: 6px 0 28px rgba(20, 20, 19, 0.07);
+            --header-bg: #EAE6DF;
+            --header-border: rgba(20, 20, 19, 0.1);
+            --subbox-bg: #E6E1D9;
+            --subbox-border: rgba(20, 20, 19, 0.12);
+            --scrollbar-bg: rgba(20, 20, 19, 0.05);
+            --scrollbar-thumb: rgba(20, 20, 19, 0.2);
+            --scrollbar-thumb-hover: rgba(20, 20, 19, 0.35);
+        }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg-canvas); color: var(--text-main);
+            overflow: hidden; user-select: none;
+            transition: background-color 0.25s ease, color 0.25s ease;
+        }
+        #p5-canvas-container {
+            position: absolute; inset: 0; z-index: 1; cursor: grab;
+        }
+        #p5-canvas-container:active { cursor: grabbing; }
+        canvas { display: block; outline: none; }
+        .glass-sidebar {
+            background: var(--glass-bg); border-right: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .glass-header {
+            background: var(--header-bg); border-bottom: 1px solid var(--header-border);
+            transition: background-color 0.25s ease, border-color 0.25s ease;
+        }
+        .sub-box {
+            background: var(--subbox-bg); border: 1px solid var(--subbox-border);
+            transition: background-color 0.25s ease, border-color 0.25s ease;
+        }
+        .theme-text-heading { color: var(--text-heading); }
+        .theme-text-main { color: var(--text-main); }
+        .theme-text-muted { color: var(--text-muted); }
+        .custom-scroll::-webkit-scrollbar { width: 5px; }
+        .custom-scroll::-webkit-scrollbar-track { background: var(--scrollbar-bg); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 9999px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+        .katex-display { margin: 0.35em 0 !important; overflow-x: auto; overflow-y: hidden; }
+        .katex { font-size: 1.0em; color: var(--text-heading); }
+    </style>
+</head>
+<body>
+    <div id="ui-root" class="relative w-full h-full z-10 pointer-events-none"></div>
+    <div id="p5-canvas-container"></div>
+
+    <!-- AGENT GUIDE: Build a ground-up, empathetic, motivated visual explanation using this Obsidian/Archival Paper sidebar + full-screen interactive canvas layout. Reveal only the minimum necessary information at each stage (`PHASES` and `StageButtons`), always provide a `TimelineScrubber` for procedural animations, construct every visual quantity or mechanism from scratch rather than dropping unmotivated results onto the screen, adapt the 2D/3D rendering engine to match the actual domain (never force irrelevant math/geometry onto non-math topics), and never clutter the canvas with raw floating decimals (keep numbers strictly inside sliders/scrubbers while using symbolic pill labels on the canvas). -->
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const easeQuad = gsap.parseEase("power2.inOut");
+        const clamp01 = (v) => Math.max(0, Math.min(1, v));
+        const normT = (t, s, e) => clamp01((t - s) / (e - s));
+        const easedT = (t, s, e) => easeQuad(normT(t, s, e));
+
+        // ============================================================================
+        // [1] DOMAIN ENGINE PLACEHOLDER
+        // ============================================================================
+        const ENGINE = {
+            MAX_PARAM: 1.0,
+            computeState(param) {
+                const c = Math.max(0.01, Math.min(param, this.MAX_PARAM));
+                return { param: c };
+            }
+        };
+
+        // ============================================================================
+        // [2] GLOBAL CANVAS STATE & SMOOTH STAGE CONTROLLERS
+        // ============================================================================
+        window.P5State = {
+            param: 0.5,
+            phase: 0,
+            stage: 1,
+            procProgress: 1.0,
+            lightMode: false,
+            zoom: 1.0,
+            pan: { x: 0, y: 0 },
+            curScale: 1.0
+        };
+
+        const tweenState = (props, duration = 2.0, ease = "power2.inOut") =>
+            gsap.to(window.P5State, { ...props, duration, ease, overwrite: "auto" });
+
+        window.resetCamera = () => {
+            tweenState({ zoom: 1.0 }, 1.2, "power2.out");
+            gsap.to(window.P5State.pan, { x: 0, y: 0, duration: 1.2, ease: "power2.out" });
+        };
+
+        // ============================================================================
+        // [3] P5.JS / CANVAS VISUALIZATION SHELL & DRAWING PRIMITIVES
+        // ============================================================================
+        const sketch = (p) => {
+            let PALETTES = {}, C = {};
+            let isDragging = false;
+            let dragStart = { x: 0, y: 0 }, panStart = { x: 0, y: 0 };
+
+            const initPalettes = () => {
+                PALETTES = {
+                    light: {
+                        bg: p.color('#FAF8F5'), unitCircle: p.color('#C45535'), circle2: p.color('#1A7872'),
+                        hyperbola: p.color('#6B4CA8'), dA: p.color('#C47110'), dH: p.color('#B53863'),
+                        result: p.color('#22784B'), sharedZ: p.color('#2364AA'), textMain: p.color('#141413'),
+                        textMuted: p.color('#66645E'), guide: p.color(20, 20, 19, 105),
+                        gridMinor: p.color(20, 20, 19, 20), gridMajor: p.color(20, 20, 19, 65),
+                        cardBg: p.color(242, 239, 233, 244), cardBorder: p.color(20, 20, 19, 55)
+                    },
+                    dark: {
+                        bg: p.color('#141413'), unitCircle: p.color('#D97757'), circle2: p.color('#3B9B96'),
+                        hyperbola: p.color('#9B7EDE'), dA: p.color('#E09132'), dH: p.color('#D46387'),
+                        result: p.color('#46A775'), sharedZ: p.color('#5B9BD5'), textMain: p.color('#F5F4EF'),
+                        textMuted: p.color('#96938B'), guide: p.color(240, 239, 234, 115),
+                        gridMinor: p.color(240, 239, 234, 18), gridMajor: p.color(240, 239, 234, 65),
+                        cardBg: p.color(28, 27, 25, 244), cardBorder: p.color(240, 239, 234, 48)
+                    }
+                };
+            };
+
+            const withAlpha = (col, a) => p.color(p.red(col), p.green(col), p.blue(col), p.constrain(a, 0, 1) * 255);
+            const setGlow = (col, blur) => {
+                p.drawingContext.shadowBlur = blur * (window.P5State.lightMode ? 0.35 : 1.0);
+                p.drawingContext.shadowColor = col.toString();
+            };
+            const clearGlow = () => { p.drawingContext.shadowBlur = 0; };
+            const dashed = (arr, fn) => { p.drawingContext.setLineDash(arr); fn(); p.drawingContext.setLineDash([]); };
+            const getLinearZoom = () => window.P5State.zoom / (window.P5State.curScale || 1.0);
+            const toScreen = (mx, my, scale) => ({ x: mx * scale, y: -my * scale });
+
+            const drawVector = (x1, y1, x2, y2, col, weight = 3.2, headSize = 10.5) => {
+                const d = p.dist(x1, y1, x2, y2);
+                if (d < 1.5) return;
+                const ang = Math.atan2(y2 - y1, x2 - x1);
+                const zFactor = window.P5State.zoom;
+                const effHead = Math.min(d * 0.45, headSize * zFactor);
+                const stopLen = Math.min(d * 0.35, effHead * 0.65);
+
+                p.stroke(col); p.strokeWeight(weight * zFactor);
+                p.line(x1, y1, x2 - Math.cos(ang) * stopLen, y2 - Math.sin(ang) * stopLen);
+
+                p.push();
+                p.translate(x2, y2); p.rotate(ang); p.noStroke(); p.fill(col);
+                p.beginShape();
+                p.vertex(0, 0); p.vertex(-effHead, effHead * 0.4);
+                p.vertex(-effHead * 0.72, 0); p.vertex(-effHead, -effHead * 0.4);
+                p.endShape(p.CLOSE);
+                p.pop();
+            };
+
+            const drawPillLabel = (txt, x, y, col, alignX = p.CENTER, alignY = p.CENTER, baseFontSize = 10.5) => {
+                p.push();
+                const zFactor = getLinearZoom();
+                const fontSize = baseFontSize * zFactor, padX = 9 * zFactor, padY = 5 * zFactor;
+                p.textFont('JetBrains Mono'); p.textSize(fontSize);
+                const tw = p.textWidth(txt) + padX, th = fontSize + padY;
+                const rx = alignX === p.LEFT ? x : alignX === p.RIGHT ? x - tw : x - tw / 2;
+                const ry = alignY === p.TOP ? y : alignY === p.BOTTOM ? y - th : y - th / 2;
+
+                p.noStroke(); p.fill(C.cardBg);
+                p.rect(rx, ry, tw, th, 4.5 * zFactor);
+                p.stroke(withAlpha(col, 0.55)); p.strokeWeight(1.05 * zFactor); p.noFill();
+                p.rect(rx, ry, tw, th, 4.5 * zFactor);
+
+                p.noStroke(); p.fill(col); p.textAlign(p.CENTER, p.CENTER);
+                p.text(txt, rx + tw / 2, ry + th / 2 + 0.35 * zFactor);
+                p.pop();
+            };
+
+            const drawRightAngle = (vx, vy, ux1, uy1, ux2, uy2, size, col) => {
+                p.push();
+                const zFactor = window.P5State.zoom, s = size * zFactor;
+                p.stroke(col); p.strokeWeight(1.5 * zFactor); p.fill(withAlpha(col, 0.18));
+                p.beginShape();
+                p.vertex(vx, vy);
+                p.vertex(vx + ux1 * s, vy + uy1 * s);
+                p.vertex(vx + (ux1 + ux2) * s, vy + (uy1 + uy2) * s);
+                p.vertex(vx + ux2 * s, vy + uy2 * s);
+                p.endShape(p.CLOSE);
+                p.pop();
+            };
+
+            const drawNode = (x, y, col, r = 8) => {
+                p.push();
+                const zFactor = getLinearZoom();
+                p.stroke(col); p.strokeWeight(2.1 * zFactor); p.fill(C.bg);
+                p.circle(x, y, r * zFactor);
+                p.pop();
+            };
+
+            const getViewportLayout = () => {
+                const sidebarW = p.width >= 640 ? 440 : 400;
+                const availW = Math.max(340, p.width - sidebarW), availH = p.height;
+                const S = window.P5State, minDim = Math.min(availW, availH);
+                return {
+                    sidebarW, availW, availH,
+                    cx: sidebarW + availW * 0.48 + S.pan.x,
+                    cy: availH * 0.52 + S.pan.y,
+                    scale: minDim * 0.28 * S.zoom
+                };
+            };
+
+            p.setup = () => {
+                const container = document.getElementById('p5-canvas-container');
+                const canvas = p.createCanvas(container.clientWidth, container.clientHeight);
+                canvas.parent('p5-canvas-container');
+                p.pixelDensity(Math.min(2, window.devicePixelRatio || 1));
+                initPalettes();
+
+                canvas.elt.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    window.P5State.zoom = p.constrain(window.P5State.zoom * (e.deltaY < 0 ? 1.08 : 0.92), 0.4, 2.8);
+                }, { passive: false });
+
+                canvas.elt.addEventListener('mousedown', (e) => {
+                    if (e.button !== 0) return;
+                    isDragging = true;
+                    dragStart = { x: e.clientX, y: e.clientY };
+                    panStart = { ...window.P5State.pan };
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        window.P5State.pan.x = panStart.x + (e.clientX - dragStart.x);
+                        window.P5State.pan.y = panStart.y + (e.clientY - dragStart.y);
+                    }
+                });
+
+                window.addEventListener('mouseup', () => { isDragging = false; });
+            };
+
+            p.windowResized = () => {
+                const container = document.getElementById('p5-canvas-container');
+                p.resizeCanvas(container.clientWidth, container.clientHeight);
+            };
+
+            const drawGrid = (scale) => {
+                p.push();
+                p.strokeWeight(1);
+                p.stroke(withAlpha(C.gridMinor, window.P5State.lightMode ? 0.08 : 0.06));
+                const step = scale * 0.5;
+                for (let i = -24; i <= 24; i++) {
+                    p.line(i * step, -2800, i * step, 2800);
+                    p.line(-2800, i * step, 2800, i * step);
+                }
+                p.stroke(withAlpha(C.gridMajor, window.P5State.lightMode ? 0.22 : 0.18));
+                for (let i = -12; i <= 12; i++) {
+                    if (i !== 0) {
+                        p.line(i * scale, -2800, i * scale, 2800);
+                        p.line(-2800, i * scale, 2800, i * scale);
+                    }
+                }
+                p.stroke(C.guide); p.strokeWeight(1.8);
+                p.line(-2800, 0, 2800, 0); p.line(0, -2800, 0, 2800);
+                p.pop();
+            };
+
+            const drawPhasePlaceholder = (st, scale) => {
+                p.push();
+                const S = window.P5State, z = S.zoom;
+                p.noFill(); p.stroke(withAlpha(C.unitCircle, 0.55)); p.strokeWeight(2.0 * z);
+                p.circle(0, 0, scale * 2);
+
+                const tip = toScreen(Math.cos(st.param * Math.PI * 0.5), Math.sin(st.param * Math.PI * 0.5) * S.procProgress, scale);
+                setGlow(C.sharedZ, 10);
+                drawVector(0, 0, tip.x, tip.y, C.sharedZ, 3.8, 10);
+                clearGlow();
+                drawNode(tip.x, tip.y, C.sharedZ, 8.5);
+                drawPillLabel("Constructed Element", tip.x + 12 * z, tip.y - 12 * z, C.sharedZ, p.LEFT, p.BOTTOM, 10);
+                p.pop();
+            };
+
+            p.draw = () => {
+                const S = window.P5State;
+                C = PALETTES[S.lightMode ? 'light' : 'dark'];
+                p.background(C.bg);
+
+                const st = ENGINE.computeState(S.param);
+                const layout = getViewportLayout();
+
+                p.push();
+                p.translate(layout.cx, layout.cy);
+                drawGrid(layout.scale);
+                drawPhasePlaceholder(st, layout.scale);
+                p.pop();
+            };
+        };
+
+        // ============================================================================
+        // [4] REACT EDITORIAL SIDEBAR & REUSABLE CONTROLS
+        // ============================================================================
+        const TeX = ({ math, block = false }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (ref.current) katex.render(math, ref.current, { displayMode: block, throwOnError: false });
+            }, [math, block]);
+            return <span ref={ref} className={block ? "block my-1.5" : "inline"} />;
+        };
+
+        const PlayPauseIcon = ({ playing, size = "w-3.5 h-3.5" }) => playing ? (
+            <svg className={size} fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="5" width="4" height="14" rx="1" />
+                <rect x="14" y="5" width="4" height="14" rx="1" />
+            </svg>
+        ) : (
+            <svg className={`${size} ml-0.5`} fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+            </svg>
+        );
+
+        const RangeTrack = ({ value, min = 0, max = 1, step = 0.005, onChange, colorClass, tall = false }) => {
+            const pct = ((value - min) / (max - min)) * 100;
+            return (
+                <div className={`relative flex-1 flex items-center ${tall ? "h-6" : "h-5"}`}>
+                    <div className={`w-full ${tall ? "h-2.5" : "h-2"} rounded-full backdrop-blur-md border border-[var(--glass-border)] bg-[var(--subbox-bg)] overflow-hidden`}>
+                        <div className={`h-full ${colorClass.fill} rounded-full ${tall ? "transition-all duration-75" : ""}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <div
+                        className={`${tall ? "w-4 h-4" : "w-3.5 h-3.5"} rounded-full bg-[var(--text-heading)] border-2 ${colorClass.border} shadow pointer-events-none absolute -translate-x-1/2 ${tall ? "transition-all duration-75" : ""}`}
+                        style={{ left: `${pct}%` }}
+                    />
+                    <input type="range" min={min} max={max} step={step} value={value} onChange={onChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0" />
+                </div>
+            );
+        };
+
+        const TimelineScrubber = ({ title, status, value, onChange, isPlaying, onTogglePlay, color }) => (
+            <div className="pt-2 border-t border-[var(--header-border)] space-y-2">
+                <div className="flex items-center justify-between text-[10px] font-mono theme-text-muted">
+                    <span>{title}</span>
+                    <span className={color.text}>{status}</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                    <button onClick={onTogglePlay} className={`w-7 h-7 rounded-md sub-box flex items-center justify-center theme-text-heading ${color.hoverBorder} transition-colors shrink-0`}>
+                        <PlayPauseIcon playing={isPlaying} />
+                    </button>
+                    <RangeTrack value={value} onChange={onChange} colorClass={color} />
+                </div>
+            </div>
+        );
+
+        const StageButtons = ({ items, active, onSelect, activeClass, cols = "grid-cols-2", compact = false }) => (
+            <div className={`grid ${cols} ${compact ? "gap-1" : "gap-1.5"}`}>
+                {items.map((item) => (
+                    <button
+                        key={item.s}
+                        onClick={() => onSelect(item)}
+                        className={`${compact ? "px-1 py-1.5 rounded text-[10px]" : "px-2 py-1.5 rounded-lg text-[11px]"} font-mono text-center transition-all border ${
+                            active === item.s ? `${activeClass} theme-text-heading font-medium` : "border-transparent theme-text-muted hover:theme-text-main"
+                        }`}
+                    >
+                        {item.label}
+                    </button>
+                ))}
+            </div>
+        );
+
+        const THEME_STYLES = {
+            unitCircle: { text: "text-math-unitCircle", fill: "bg-math-unitCircle/80", border: "border-math-unitCircle", hoverBorder: "hover:border-math-unitCircle", activeBtn: "bg-math-unitCircle/20 border-math-unitCircle" },
+            sharedZ:    { text: "text-math-sharedZ",    fill: "bg-math-sharedZ/80",    border: "border-math-sharedZ",    hoverBorder: "hover:border-math-sharedZ",    activeBtn: "bg-math-sharedZ/20 border-math-sharedZ" },
+            dA:         { text: "text-math-dA",         fill: "bg-math-dA/80",         border: "border-math-dA",         hoverBorder: "hover:border-math-dA",         activeBtn: "bg-math-dA/20 border-math-dA" },
+            dH:         { text: "text-math-dH",         fill: "bg-math-dH/80",         border: "border-math-dH",         hoverBorder: "hover:border-math-dH",         activeBtn: "bg-math-dH/20 border-math-dH" },
+            result:     { text: "text-math-result",     fill: "bg-math-result/80",     border: "border-math-result",     hoverBorder: "hover:border-math-result",     activeBtn: "bg-math-result/20 border-math-result" }
+        };
+
+        const PHASES = [
+            {
+                id: "PHASE 1",
+                title: "01. Phase Title Placeholder",
+                subtitle: "Motivated First-Principles Construction",
+                stages: {
+                    1: {
+                        body: "Explain the high-level problem and construct the initial elements from scratch without assuming unestablished domain knowledge.",
+                        eq: "f(x) = \\dots"
+                    },
+                    2: {
+                        body: "Reveal the next layer of the mechanism step by step, connecting the visual transformation directly to the underlying structure.",
+                        eq: "g(x) = \\dots"
+                    }
+                }
+            }
+        ];
+
+        const App = () => {
+            const [phase, setPhase] = useState(0);
+            const [stage, setStage] = useState(1);
+            const [paramVal, setParamVal] = useState(0.5);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [lightMode, setLightMode] = useState(false);
+
+            const [procProgress, setProcProgress] = useState(1.0);
+            const [isProcPlaying, setIsProcPlaying] = useState(false);
+
+            useEffect(() => {
+                window.P5State.lightMode = lightMode;
+                document.body.classList.toggle('light-mode', lightMode);
+            }, [lightMode]);
+
+            useEffect(() => {
+                if (!isProcPlaying) return;
+                let raf, lastTime = performance.now();
+                const tick = (now) => {
+                    const dt = (now - lastTime) / 1000;
+                    lastTime = now;
+                    setProcProgress((prev) => {
+                        const next = Math.min(1.0, prev + dt * 0.25);
+                        window.P5State.procProgress = next;
+                        if (next >= 1.0) setIsProcPlaying(false);
+                        return next;
+                    });
+                    raf = requestAnimationFrame(tick);
+                };
+                raf = requestAnimationFrame(tick);
+                return () => cancelAnimationFrame(raf);
+            }, [isProcPlaying]);
+
+            useEffect(() => {
+                if (!isPlaying) return;
+                let raf, lastTime = performance.now();
+                const tick = (now) => {
+                    const dt = (now - lastTime) / 1000;
+                    lastTime = now;
+                    setParamVal((prev) => {
+                        const next = Math.min(ENGINE.MAX_PARAM, prev + dt * 0.15);
+                        window.P5State.param = next;
+                        if (next >= ENGINE.MAX_PARAM) setIsPlaying(false);
+                        return next;
+                    });
+                    raf = requestAnimationFrame(tick);
+                };
+                raf = requestAnimationFrame(tick);
+                return () => cancelAnimationFrame(raf);
+            }, [isPlaying]);
+
+            const curPhaseData = PHASES[phase] || PHASES[0];
+            const curStage = curPhaseData.stages[stage] || curPhaseData.stages[1];
+
+            return (
+                <div className="w-[400px] sm:w-[440px] h-full glass-sidebar flex flex-col pointer-events-auto relative z-20">
+                    <div className="glass-header px-5 py-3.5 flex items-center justify-between shrink-0">
+                        <div className="text-lg font-serif tracking-tight theme-text-heading">
+                            Topic Header Placeholder
+                        </div>
+                        <button
+                            onClick={() => setLightMode(!lightMode)}
+                            className="w-8 h-8 rounded-lg sub-box flex items-center justify-center theme-text-muted hover:theme-text-heading transition-colors"
+                            title={lightMode ? "Switch to Obsidian Dark Mode" : "Switch to Archival Paper Light Mode"}
+                        >
+                            {lightMode ? (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                                </svg>
+                            ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="5" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                                </svg>
+                            )}
+                        </button>
+                    </div>
+
+                    <div className="grid grid-flow-col auto-cols-fr border-b border-[var(--header-border)] shrink-0">
+                        {PHASES.map((pItem, idx) => (
+                            <button
+                                key={pItem.id}
+                                onClick={() => {
+                                    setPhase(idx); setStage(1);
+                                    window.P5State.phase = idx; window.P5State.stage = 1;
+                                    window.resetCamera();
+                                }}
+                                className={`py-2.5 text-[10px] font-mono tracking-wider uppercase transition-all ${
+                                    phase === idx
+                                        ? "bg-math-unitCircle/15 border-b-2 border-math-unitCircle theme-text-heading font-semibold"
+                                        : "theme-text-muted hover:theme-text-main"
+                                }`}
+                            >
+                                {pItem.id}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto custom-scroll px-5 py-5 space-y-4">
+                        <div className="space-y-1">
+                            <h2 className="text-base font-semibold theme-text-heading tracking-tight">{curPhaseData.title}</h2>
+                            <div className="text-[11px] font-mono uppercase tracking-wider text-math-unitCircle font-medium">{curPhaseData.subtitle}</div>
+                        </div>
+
+                        <p className="text-[13.5px] leading-relaxed theme-text-main font-normal">{curStage.body}</p>
+
+                        {curStage.eq && (
+                            <div className="sub-box rounded-xl px-3.5 py-3 overflow-x-auto">
+                                <TeX block math={curStage.eq} />
+                            </div>
+                        )}
+
+                        <div className="sub-box rounded-xl p-3.5 space-y-3">
+                            <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider theme-text-muted">
+                                <span>Construction Stage</span>
+                                <span className="text-math-sharedZ">Step {stage}/2</span>
+                            </div>
+                            <StageButtons
+                                cols="grid-cols-2"
+                                active={stage}
+                                activeClass={THEME_STYLES.sharedZ.activeBtn}
+                                items={[{ s: 1, label: "1. Initial Setup" }, { s: 2, label: "2. Mechanism Step" }]}
+                                onSelect={({ s }) => {
+                                    setStage(s); window.P5State.stage = s;
+                                }}
+                            />
+                            <TimelineScrubber
+                                title="PROCEDURAL TIMELINE"
+                                status={`${Math.round(procProgress * 100)}%`}
+                                value={procProgress}
+                                onChange={(e) => {
+                                    setIsProcPlaying(false);
+                                    const v = parseFloat(e.target.value);
+                                    setProcProgress(v);
+                                    window.P5State.procProgress = v;
+                                }}
+                                isPlaying={isProcPlaying}
+                                onTogglePlay={() => {
+                                    if (!isProcPlaying && procProgress >= 0.98) {
+                                        setProcProgress(0.0); window.P5State.procProgress = 0.0;
+                                    }
+                                    setIsProcPlaying(!isProcPlaying);
+                                }}
+                                color={THEME_STYLES.sharedZ}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="px-5 py-2.5 border-t border-[var(--header-border)] flex items-center justify-end gap-2 shrink-0">
+                        <button onClick={() => window.resetCamera()} className="px-2.5 py-1.5 rounded-lg text-[10.5px] font-mono sub-box theme-text-muted hover:theme-text-heading transition-colors">
+                            Reset View
+                        </button>
+                    </div>
+
+                    <div className="px-5 py-4 border-t border-[var(--header-border)] bg-[var(--header-bg)] space-y-2.5 shrink-0">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                            <span className="theme-text-muted uppercase tracking-wider">Primary Parameter</span>
+                            <span className="theme-text-heading font-semibold">
+                                {paramVal.toFixed(3)}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => {
+                                    if (!isPlaying && paramVal >= ENGINE.MAX_PARAM - 0.01) { setParamVal(0.02); window.P5State.param = 0.02; }
+                                    setIsPlaying(!isPlaying);
+                                }}
+                                className="w-9 h-9 rounded-xl sub-box flex items-center justify-center theme-text-heading hover:border-math-unitCircle transition-all shrink-0"
+                                title={isPlaying ? "Pause Sweep" : "Play Sweep"}
+                            >
+                                <PlayPauseIcon playing={isPlaying} size="w-4 h-4" />
+                            </button>
+                            <RangeTrack
+                                tall min={0.02} max={ENGINE.MAX_PARAM} step={0.002} value={paramVal}
+                                onChange={(e) => {
+                                    const v = parseFloat(e.target.value);
+                                    setIsPlaying(false); setParamVal(v); window.P5State.param = v;
+                                }}
+                                colorClass={{ fill: "bg-math-unitCircle/75", border: "border-math-unitCircle" }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        window.addEventListener('load', () => {
+            new p5(sketch);
+            ReactDOM.createRoot(document.getElementById('ui-root')).render(<App />);
+        });
+    </script>
+</body>
+</html>

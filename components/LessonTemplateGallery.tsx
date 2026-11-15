@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Expand, LayoutTemplate, X } from 'lucide-react';
-import { LESSON_TEMPLATE_OPTIONS } from '../services/prompts/lessonTemplates';
+import { LESSON_TEMPLATE_OPTIONS } from '../services/prompts';
 
 interface LessonTemplateGalleryProps {
   selectedFilename: string;

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Dual-Layer WebGL + p5.js Explanation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{
+  fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','monospace'],serif:['Lora','serif']},
+  colors:{math:{unitCircle:'#D97757',circle2:'#3B9B96',hyperbola:'#9B7EDE',dA:'#E09132',dH:'#D46387',result:'#46A775',sharedZ:'#5B9BD5'}}
+}}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<style>
+:root{
+  --bg-canvas:#0D171E;--text-main:#E6E4DD;--text-heading:#F5F4EF;--text-muted:#A0ABA5;
+  --glass-bg:rgba(15, 22, 28, 0.62);--glass-border:rgba(240,239,234,.15);--glass-shadow:6px 0 32px rgba(0,0,0,.42);
+  --header-bg:rgba(18, 26, 33, 0.58);--header-border:rgba(240,239,234,.12);
+  --subbox-bg:rgba(10, 16, 21, 0.52);--subbox-border:rgba(240,239,234,.12);
+  --scrollbar-bg:rgba(0,0,0,.18);--scrollbar-thumb:rgba(240,239,234,.2);--scrollbar-thumb-hover:rgba(240,239,234,.35);
+}
+body,html{margin:0;padding:0;width:100%;height:100%;background:var(--bg-canvas);color:var(--text-main);overflow:hidden;user-select:none}
+#webgl-water-container{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+#p5-canvas-container{position:fixed;inset:0;width:100vw;height:100vh;z-index:1;cursor:grab}
+#p5-canvas-container:active{cursor:grabbing}
+canvas{display:block;outline:none}
+.glass-sidebar,.glass-header,.sub-box{
+  backdrop-filter:blur(16px) saturate(135%);
+  -webkit-backdrop-filter:blur(16px) saturate(135%);
+  transition:background-color .3s,border-color .3s,box-shadow .3s;
+}
+.glass-sidebar{background:var(--glass-bg);border-right:1px solid var(--glass-border);box-shadow:var(--glass-shadow)}
+.glass-header{background:var(--header-bg);border-bottom:1px solid var(--header-border)}
+.sub-box{background:var(--subbox-bg);border:1px solid var(--subbox-border)}
+.sep{padding-top:.5rem;border-top:1px solid var(--header-border)}
+.theme-text-heading{color:var(--text-heading)}.theme-text-main{color:var(--text-main)}.theme-text-muted{color:var(--text-muted)}
+.custom-scroll::-webkit-scrollbar{width:5px}.custom-scroll::-webkit-scrollbar-track{background:var(--scrollbar-bg)}
+.custom-scroll::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:9999px}
+.custom-scroll::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover)}
+.katex-display{margin:.25em 0!important;overflow:hidden}.katex{font-size:.96em;color:var(--text-heading)}
+</style>
+</head>
+<body>
+<div id="webgl-water-container"></div>
+<div id="p5-canvas-container"></div>
+<div id="ui-root" class="relative w-full h-full z-10 pointer-events-none"></div>
+
+<!-- AGENT GUIDE: Preserve this dual-layer creative visual architecture (`#webgl-water-container` for Three.js WebGL shaders/3D scenes in the background + `#p5-canvas-container` for precision 2D vector/diagram overlays with anti-collision pill labels `lbl` and `plainTxt` + `#ui-root` frosted-glass sidebar). Populate `SPACES` with visual environment modes, `PHASES` with your step-by-step motivated narrative and stage scrubbers, `ENGINE.compute` with your domain state calculations, `BackgroundGL` with custom Three.js shaders or 3D objects, and the p5 phase renderers (`drawPhase0`, etc.) with crisp interactive diagrams. -->
+<script>
+const easeQuad = gsap.parseEase("power2.inOut"), clamp01 = v => Math.max(0, Math.min(1, v));
+const normT = (t, s, e) => clamp01((t - s) / (e - s)), easedT = (t, s, e) => easeQuad(normT(t, s, e));
+const MAX_X = 1.0, MAX_N = 60;
+
+// ============================================================================
+// VISUAL ENVIRONMENT MODES / FILTERS
+// ============================================================================
+const SPACES = [
+  {
+    id: 0,
+    name: "Mode 1",
+    subtitle: "Primary Visual Medium",
+    badgeCol: "text-math-circle2 border-math-circle2/50 bg-math-circle2/15",
+    glassBg: "rgba(14, 23, 30, 0.60)",
+    cardBg: [14, 24, 32],
+    icon: `<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>`
+  },
+  {
+    id: 1,
+    name: "Mode 2",
+    subtitle: "Secondary Visual Medium",
+    badgeCol: "text-math-dA border-math-dA/50 bg-math-dA/15",
+    glassBg: "rgba(22, 19, 16, 0.62)",
+    cardBg: [24, 20, 17],
+    icon: `<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`
+  }
+];
+
+// ============================================================================
+// DOMAIN COMPUTATION ENGINE PLACEHOLDER
+// ============================================================================
+const ENGINE = {
+  compute(param, n = 6) {
+    const val = Math.max(0.05, Math.min(param, MAX_X));
+    return { val, n };
+  }
+};
+
+const S = window.P5State = {
+  x: 0.5, n: 6, logPrec: 1.0, phase: 0,
+  stages: [1, 1],
+  anims: [0.35, 0.35],
+  proc: 0.35,
+  playX: false, playProc: false,
+  spaceIdx: 0,
+  zoom: 1, pan: { x: 0, y: 0 },
+  layout: { sidebarW: 440, availW: 800, availH: 800, cx: 700, cy: 500, scale: 260 }
+};
+
+const tweenS = (pr, duration = 1.4, ease = "power2.inOut") => gsap.to(S, { ...pr, duration, ease, overwrite: "auto" });
+const resetCam = () => {
+  tweenS({ zoom: 1 }, 1.1, "power2.out");
+  gsap.to(S.pan, { x: 0, y: 0, duration: 1.1, ease: "power2.out" });
+};
+
+const PHASES = [
+  {
+    id: "PHASE 1", title: "01. Phase Title Placeholder",
+    colorKey: "sharedZ", cols: "grid-cols-2",
+    stages: [
+      [
+        "Stage 1A",
+        "Replace this placeholder with motivated, ground-up prose explaining the first step of the mechanism.",
+        "f(x) = \\dots",
+        .35
+      ],
+      [
+        "Stage 1B",
+        "Replace this placeholder with the second stage explanation.",
+        "g(x) = \\dots",
+        1
+      ]
+    ]
+  },
+  {
+    id: "PHASE 2", title: "02. Secondary Phase Placeholder",
+    colorKey: "unitCircle", cols: "grid-cols-2",
+    stages: [
+      [
+        "Stage 2A",
+        "Explain the next conceptual or visual progression here.",
+        "h(x) = \\dots",
+        .35
+      ],
+      [
+        "Stage 2B",
+        "Complete the synthesis or mechanism here.",
+        "y = \\dots",
+        1
+      ]
+    ]
+  }
+];
+
+// ============================================================================
+// THREE.JS WEBGL BACKGROUND LAYER SHELL
+// ============================================================================
+const BackgroundGL = {
+  renderer: null,
+  scene: null,
+  camera: null,
+  mat: null,
+  clock: null,
+
+  init() {
+    const container = document.getElementById('webgl-water-container');
+    const w = window.innerWidth, h = window.innerHeight;
+
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: "high-performance" });
+    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.renderer.setSize(w, h);
+    container.appendChild(this.renderer.domElement);
+
+    this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.clock = new THREE.Clock();
+
+    this.mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uResolution: { value: new THREE.Vector2(w, h) },
+        uOrigin: { value: new THREE.Vector2(700, 500) },
+        uScale: { value: 260.0 },
+        uTime: { value: 0.0 },
+        uSpaceMode: { value: 0 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        varying vec2 vUv;
+        uniform vec2 uResolution;
+        uniform vec2 uOrigin;
+        uniform float uScale;
+        uniform float uTime;
+        uniform int uSpaceMode;
+
+        void main() {
+          vec2 fragPx = vec2(gl_FragCoord.x, uResolution.y - gl_FragCoord.y);
+          vec2 m = (fragPx - uOrigin) / uScale;
+          float wave = 0.03 * sin(m.x * 4.0 + uTime * 0.8) * cos(m.y * 4.0 - uTime * 0.6);
+          vec3 base = uSpaceMode == 0 ? vec3(0.05, 0.10, 0.14) : vec3(0.09, 0.08, 0.07);
+          gl_FragColor = vec4(base + wave, 1.0);
+        }
+      `
+    });
+
+    this.scene = new THREE.Scene();
+    this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.mat));
+  },
+
+  resize(w, h) {
+    if (!this.renderer) return;
+    this.renderer.setSize(w, h);
+    this.mat.uniforms.uResolution.value.set(w, h);
+  },
+
+  stepAndRender() {
+    if (!this.renderer) return;
+    const L = S.layout;
+    this.mat.uniforms.uOrigin.value.set(L.cx, L.cy);
+    this.mat.uniforms.uScale.value = L.scale;
+    this.mat.uniforms.uTime.value = this.clock.getElapsedTime();
+    this.mat.uniforms.uSpaceMode.value = S.spaceIdx;
+    this.renderer.render(this.scene, this.camera);
+  }
+};
+
+// ============================================================================
+// P5.JS PRECISION GEOMETRIC OVERLAY & DRAWING HELPERS
+// ============================================================================
+const sketch = p => {
+  let C = {}, z = 1, L = {}, isDrag = false, dStart = { x: 0, y: 0 }, pStart = { x: 0, y: 0 };
+  let placedLabels = [];
+  const AL = { L: p.LEFT, R: p.RIGHT, C: p.CENTER, T: p.TOP, B: p.BOTTOM };
+
+  const colA = (c, a = 1) => p.color(p.red(c), p.green(c), p.blue(c), p.constrain(a, 0, 1) * 255);
+  const glow = (c, b) => { p.drawingContext.shadowBlur = b * 0.85; p.drawingContext.shadowColor = c.toString(); };
+  const noGlow = () => { p.drawingContext.shadowBlur = 0; };
+  const dashed = (arr, fn) => { p.drawingContext.setLineDash(arr); fn(); p.drawingContext.setLineDash([]); };
+  const pt = (mx, my, sc) => ({ x: mx * sc, y: -my * sc });
+
+  const uiScale = () => Math.pow(p.constrain(z, 0.35, 10), 0.2);
+  const toScreen = (wx, wy) => ({ sx: L.cx + wx, sy: L.cy + wy });
+  const viewportAlpha = (sx, sy, pad = 24) => {
+    const minX = L.sidebarW + pad, maxX = p.width - pad, minY = pad, maxY = p.height - pad;
+    if (sx < minX || sx > maxX || sy < minY || sy > maxY) return 0;
+    const fadeZone = 32;
+    const ax = Math.min((sx - minX) / fadeZone, (maxX - sx) / fadeZone, 1);
+    const ay = Math.min((sy - minY) / fadeZone, (maxY - sy) / fadeZone, 1);
+    return clamp01(Math.min(ax, ay));
+  };
+  const boxesOverlap = (a, b, margin = 4.5) => !(
+    a.rx + a.tw + margin < b.rx ||
+    b.rx + b.tw + margin < a.rx ||
+    a.ry + a.th + margin < b.ry ||
+    b.ry + b.th + margin < a.ry
+  );
+
+  const ln = (x1, y1, x2, y2, c, w = 1.8, a = 1, d = []) => {
+    const us = uiScale();
+    p.stroke(colA(c, a)); p.strokeWeight(w * us);
+    d.length ? dashed(d.map(v => v * us), () => p.line(x1, y1, x2, y2)) : p.line(x1, y1, x2, y2);
+  };
+  const arc = (x, y, d, a1, a2, sc, w = 1.8, sa = 1, fc = null, fa = 0, mode, dsh = []) => {
+    if (Math.abs(a2 - a1) < 1e-5) return;
+    const startA = Math.min(a1, a2), stopA = Math.max(a1, a2);
+    const us = uiScale();
+    fc ? p.fill(colA(fc, fa)) : p.noFill();
+    p.stroke(colA(sc, sa)); p.strokeWeight(w * us);
+    dsh.length ? dashed(dsh.map(v => v * us), () => p.arc(x, y, d, d, startA, stopA, mode)) : p.arc(x, y, d, d, startA, stopA, mode);
+  };
+  const poly = (pts, fc, fa, sc, sa, w = 1.8) => {
+    const us = uiScale();
+    fc ? p.fill(colA(fc, fa)) : p.noFill();
+    sc ? (p.stroke(colA(sc, sa)), p.strokeWeight(w * us)) : p.noStroke();
+    p.beginShape();
+    pts.forEach(q => p.vertex(q.x, q.y));
+    p.endShape(p.CLOSE);
+  };
+  const vec = (x1, y1, x2, y2, c, w = 3.2, h = 10, gl = 0) => {
+    const d = p.dist(x1, y1, x2, y2);
+    if (d < 1.2) return;
+    const us = uiScale();
+    if (gl) glow(c, gl);
+    const ang = Math.atan2(y2 - y1, x2 - x1), eh = Math.min(d * .45, h * us), stop = Math.min(d * .35, eh * .65);
+    p.stroke(c); p.strokeWeight(w * us); p.line(x1, y1, x2 - Math.cos(ang) * stop, y2 - Math.sin(ang) * stop);
+    p.push(); p.translate(x2, y2); p.rotate(ang); p.noStroke(); p.fill(c);
+    p.beginShape(); p.vertex(0, 0); p.vertex(-eh, eh * .4); p.vertex(-eh * .72, 0); p.vertex(-eh, -eh * .4); p.endShape(p.CLOSE);
+    p.pop();
+    if (gl) noGlow();
+  };
+
+  const lbl = (txt, x, y, c, al = 'CC', fs = 9.5, opts = {}) => {
+    const { minZoom = 0, maxZoom = 999, fadeRange = 0.35, margin = 4.5, leaderTo = null, alpha = 1, force = false } = opts;
+    if (z < minZoom || z > maxZoom) return false;
+    const zoomAlpha = minZoom > 0 ? clamp01((z - minZoom) / Math.max(0.05, fadeRange)) : 1;
+    const zoomOutAlpha = maxZoom < 999 ? clamp01((maxZoom - z) / Math.max(0.05, fadeRange)) : 1;
+    const { sx, sy } = toScreen(x, y);
+    const vpA = viewportAlpha(sx, sy, 18);
+    const totA = vpA * zoomAlpha * zoomOutAlpha * alpha;
+    if (totA <= 0.04) return false;
+
+    const us = uiScale();
+    p.push();
+    const f = fs * us;
+    p.textFont('JetBrains Mono'); p.textSize(f);
+    const tw = p.textWidth(txt) + 10 * us, th = f + 5.5 * us;
+    const ax = AL[al[0]], ay = AL[al[1]];
+    const rx = ax === p.LEFT ? x : ax === p.RIGHT ? x - tw : x - tw / 2;
+    const ry = ay === p.TOP ? y : ay === p.BOTTOM ? y - th : y - th / 2;
+    const sBox = { rx: L.cx + rx, ry: L.cy + ry, tw, th };
+
+    if (sBox.rx < L.sidebarW + 6 || sBox.rx + sBox.tw > p.width - 6 || sBox.ry < 6 || sBox.ry + sBox.th > p.height - 6) {
+      p.pop();
+      return false;
+    }
+    if (!force && placedLabels.some(b => boxesOverlap(sBox, b, margin * us))) {
+      p.pop();
+      return false;
+    }
+    placedLabels.push(sBox);
+
+    if (leaderTo) {
+      const lx = p.constrain(leaderTo.x, rx, rx + tw), ly = p.constrain(leaderTo.y, ry, ry + th);
+      ln(leaderTo.x, leaderTo.y, lx, ly, c, 1.1, 0.5 * totA, [3, 3]);
+    }
+
+    p.noStroke(); p.fill(colA(C.cardBg, 0.88 * totA)); p.rect(rx, ry, tw, th, 4.5 * us);
+    p.stroke(colA(c, .62 * totA)); p.strokeWeight(1.05 * us); p.noFill(); p.rect(rx, ry, tw, th, 4.5 * us);
+    p.noStroke(); p.fill(colA(c, totA)); p.textAlign(p.CENTER, p.CENTER); p.text(txt, rx + tw / 2, ry + th / 2 + .35 * us);
+    p.pop();
+    return true;
+  };
+
+  const plainTxt = (txt, x, y, c, al = 'CC', fs = 9.5, opts = {}) => {
+    const { minZoom = 0, maxZoom = 999, fadeRange = 0.35, margin = 4, alpha = 1, force = false } = opts;
+    if (z < minZoom || z > maxZoom) return false;
+    const zoomAlpha = minZoom > 0 ? clamp01((z - minZoom) / Math.max(0.05, fadeRange)) : 1;
+    const { sx, sy } = toScreen(x, y);
+    const vpA = viewportAlpha(sx, sy, 14);
+    const totA = vpA * zoomAlpha * alpha;
+    if (totA <= 0.04) return false;
+
+    const us = uiScale();
+    p.push();
+    const f = fs * us;
+    p.textFont('JetBrains Mono'); p.textSize(f);
+    const tw = p.textWidth(txt) + 4 * us, th = f + 2 * us;
+    const ax = AL[al[0]], ay = AL[al[1]];
+    const rx = ax === p.LEFT ? x : ax === p.RIGHT ? x - tw : x - tw / 2;
+    const ry = ay === p.TOP ? y : ay === p.BOTTOM ? y - th : y - th / 2;
+    const sBox = { rx: L.cx + rx, ry: L.cy + ry, tw, th };
+
+    if (sBox.rx < L.sidebarW + 6 || sBox.rx + sBox.tw > p.width - 6 || sBox.ry < 6 || sBox.ry + sBox.th > p.height - 6) {
+      p.pop();
+      return false;
+    }
+    if (!force && placedLabels.some(b => boxesOverlap(sBox, b, margin * us))) {
+      p.pop();
+      return false;
+    }
+    placedLabels.push(sBox);
+
+    p.noStroke(); p.fill(colA(c, totA));
+    p.textAlign(ax, ay); p.text(txt, x, y);
+    p.pop();
+    return true;
+  };
+
+  const dot = (x, y, c, r = 7.5) => {
+    const us = uiScale();
+    p.push(); p.stroke(c); p.strokeWeight(1.8 * us); p.fill(C.bg); p.circle(x, y, r * us); p.pop();
+  };
+
+  const getLayout = () => {
+    const sw = p.width >= 640 ? 440 : 400, aw = Math.max(340, p.width - sw), ah = p.height, m = Math.min(aw, ah);
+    return {
+      sidebarW: sw, availW: aw, availH: ah,
+      cx: sw + aw * 0.48 + S.pan.x,
+      cy: ah * 0.52 + S.pan.y,
+      scale: m * 0.32 * z
+    };
+  };
+
+  p.setup = () => {
+    BackgroundGL.init();
+    const el = document.getElementById('p5-canvas-container');
+    const cv = p.createCanvas(el.clientWidth, el.clientHeight).parent('p5-canvas-container');
+    p.pixelDensity(Math.min(2, window.devicePixelRatio || 1));
+
+    C = {
+      bg: p.color('#0F1B22'),
+      unitCircle: p.color('#E88262'),
+      circle2: p.color('#4AC0B9'),
+      hyperbola: p.color('#AE92F0'),
+      dA: p.color('#F09E3E'),
+      dH: p.color('#E37095'),
+      result: p.color('#54C288'),
+      sharedZ: p.color('#6BAEE8'),
+      textMain: p.color('#F5F4EF'),
+      textMuted: p.color('#A8B6BE'),
+      guide: p.color(240, 245, 248, 130),
+      cardBg: p.color(16, 26, 33, 232)
+    };
+
+    cv.elt.addEventListener('wheel', e => {
+      e.preventDefault();
+      const sw = p.width >= 640 ? 440 : 400, aw = Math.max(340, p.width - sw), ah = p.height;
+      const baseCx = sw + aw * 0.48, baseCy = ah * 0.52;
+      const oldZoom = S.zoom;
+      const factor = e.deltaY < 0 ? 1.12 : 0.89;
+      const newZoom = p.constrain(oldZoom * factor, 0.32, 10.0);
+      const ratio = newZoom / oldZoom;
+      const mx = e.clientX, my = e.clientY;
+      const curCx = baseCx + S.pan.x, curCy = baseCy + S.pan.y;
+      S.pan.x = (mx - baseCx) - (mx - curCx) * ratio;
+      S.pan.y = (my - baseCy) - (my - curCy) * ratio;
+      S.zoom = newZoom;
+    }, { passive: false });
+    cv.elt.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      isDrag = true; dStart = { x: e.clientX, y: e.clientY }; pStart = { ...S.pan };
+    });
+    window.addEventListener('mousemove', e => {
+      if (isDrag) S.pan = { x: pStart.x + (e.clientX - dStart.x), y: pStart.y + (e.clientY - dStart.y) };
+    });
+    window.addEventListener('mouseup', () => { isDrag = false; });
+  };
+
+  p.windowResized = () => {
+    const el = document.getElementById('p5-canvas-container');
+    p.resizeCanvas(el.clientWidth, el.clientHeight);
+    BackgroundGL.resize(el.clientWidth, el.clientHeight);
+  };
+
+  const drawAxes = (sc) => {
+    const us = uiScale();
+    p.push();
+    p.stroke(C.guide); p.strokeWeight(1.8 * us);
+    p.line(-4500, 0, 4500, 0);
+    p.line(0, -4500, 0, 4500);
+    p.noFill(); p.stroke(colA(C.textMain, 0.38)); p.strokeWeight(1.6 * us);
+    p.circle(0, 0, sc * 2);
+    p.pop();
+  };
+
+  const drawPhasePlaceholder = (st, sc) => {
+    const pr = S.anims[S.phase] || 0.5;
+    const tip = pt(Math.cos(st.val * Math.PI * 0.5), Math.sin(st.val * Math.PI * 0.5) * pr, sc);
+    vec(0, 0, tip.x, tip.y, C.sharedZ, 4.0, 10, 8);
+    dot(0, 0, C.textMain, 7.5);
+    dot(tip.x, tip.y, C.sharedZ, 8.5);
+    lbl("Interactive Overlay Element", tip.x + 14, tip.y - 12, C.sharedZ, 'LB', 9.5, { force: true });
+  };
+
+  p.draw = () => {
+    const dt = Math.min(.1, p.deltaTime / 1000);
+    if (S.playX) { S.x = Math.min(MAX_X, S.x + dt * .06); if (S.x >= MAX_X) S.playX = false; UI.syncX(); }
+    if (S.playProc) { const n = Math.min(1, S.proc + dt * .05); if (n >= 1) S.playProc = false; UI.syncProc(n); }
+
+    z = S.zoom;
+    const sp = SPACES[S.spaceIdx];
+    C.cardBg = p.color(...sp.cardBg, 232);
+
+    const st = ENGINE.compute(S.x, S.n);
+    L = getLayout();
+    S.layout = L;
+
+    BackgroundGL.stepAndRender(st);
+
+    p.clear();
+    placedLabels = [];
+
+    p.push();
+    p.translate(L.cx, L.cy);
+    drawAxes(L.scale);
+    drawPhasePlaceholder(st, L.scale);
+    p.pop();
+  };
+};
+
+const mkTheme = c => ({ text: `text-math-${c}`, fill: `bg-math-${c}/80`, border: `border-math-${c}`, hover: `hover:border-math-${c}`, btn: `bg-math-${c}/20 border-math-${c}` });
+const TS = {
+  unitCircle: mkTheme('unitCircle'),
+  sharedZ: mkTheme('sharedZ'),
+  dA: mkTheme('dA'),
+  dH: mkTheme('dH'),
+  result: mkTheme('result'),
+  hyperbola: mkTheme('hyperbola'),
+  circle2: mkTheme('circle2')
+};
+const playSvg = (on, sz = "w-3.5 h-3.5") => on
+  ? `<svg class="${sz}" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`
+  : `<svg class="${sz} ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+const tex = (m, b = false) => katex.renderToString(m, { displayMode: b, throwOnError: false });
+const sliderHtml = (id, min, max, step, val, pct, fillCls, bdrCls, tall) => `
+  <div class="relative flex-1 flex items-center ${tall ? "h-6" : "h-5"}">
+    <div class="w-full ${tall ? "h-2.5" : "h-2"} rounded-full backdrop-blur-md border border-[var(--glass-border)] bg-[var(--subbox-bg)] overflow-hidden">
+      <div id="${id}-fill" class="h-full ${fillCls} rounded-full ${tall ? "transition-all duration-75" : ""}" style="width:${pct}%"></div>
+    </div>
+    <div id="${id}-thumb" class="${tall ? "w-4 h-4" : "w-3.5 h-3.5"} rounded-full bg-[var(--text-heading)] border-2 ${bdrCls} shadow pointer-events-none absolute -translate-x-1/2 ${tall ? "transition-all duration-75" : ""}" style="left:${pct}%"></div>
+    <input id="${id}-input" type="range" min="${min}" max="${max}" step="${step}" value="${val}" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0">
+  </div>`;
+
+const stageFromP = (ph, v) => v < .5 ? 1 : 2;
+
+const UI = {
+  init() {
+    document.getElementById('ui-root').innerHTML = `
+      <div id="sidebar-panel" class="w-[400px] sm:w-[440px] h-full glass-sidebar flex flex-col pointer-events-auto relative z-20">
+        <div class="glass-header px-4 py-3.5 flex items-center justify-between gap-2 shrink-0">
+          <div class="text-sm sm:text-base font-serif tracking-tight shrink-0">Topic Header Placeholder</div>
+          <button id="btn-space" class="px-2.5 py-1.5 rounded-lg border text-[11px] font-mono flex items-center gap-1.5 transition-all shrink-0 hover:brightness-125"></button>
+        </div>
+        <div id="phase-tabs" class="grid grid-flow-col auto-cols-fr border-b border-[var(--header-border)] shrink-0"></div>
+        <div id="phase-body" class="flex-1 overflow-y-auto custom-scroll px-5 py-4 space-y-3.5"></div>
+        <div class="px-5 py-2.5 border-t border-[var(--header-border)] flex items-center justify-end shrink-0">
+          <button onclick="resetCam()" class="w-full py-1.5 px-3.5 rounded-lg text-xs font-mono sub-box theme-text-muted hover:theme-text-heading transition-colors">Reset View</button>
+        </div>
+        <div class="px-5 py-3.5 border-t border-[var(--header-border)] bg-[var(--header-bg)] space-y-3 shrink-0">
+          <div id="x-wrap" class="space-y-1.5">
+            <div class="flex items-center justify-between text-xs font-mono">
+              <span class="theme-text-muted uppercase tracking-wider">Primary Parameter</span>
+              <span id="x-lbl" class="theme-text-heading font-semibold"></span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button id="btn-play-x" class="w-8 h-8 rounded-xl sub-box flex items-center justify-center theme-text-heading hover:border-math-unitCircle transition-all shrink-0"></button>
+              ${sliderHtml('x', .05, MAX_X, .002, S.x, 0, 'bg-math-unitCircle/75', 'border-math-unitCircle', true)}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('btn-space').onclick = () => {
+      S.spaceIdx = (S.spaceIdx + 1) % SPACES.length;
+      document.documentElement.style.setProperty('--glass-bg', SPACES[S.spaceIdx].glassBg);
+      UI.render();
+    };
+    document.getElementById('btn-play-x').onclick = () => { if (!S.playX && S.x >= MAX_X - .01) S.x = .05; S.playX = !S.playX; UI.syncX(); };
+    document.getElementById('x-input').oninput = e => { S.playX = false; S.x = parseFloat(e.target.value); UI.syncX(); };
+    UI.render(); UI.syncX();
+  },
+  syncX() {
+    const pct = ((S.x - .05) / (MAX_X - .05)) * 100;
+    document.getElementById('x-lbl').textContent = S.x.toFixed(3);
+    document.getElementById('x-fill').style.width = document.getElementById('x-thumb').style.left = `${pct}%`;
+    document.getElementById('x-input').value = S.x;
+    const btn = document.getElementById('btn-play-x');
+    btn.title = S.playX ? "Pause Sweep" : "Play Sweep"; btn.innerHTML = playSvg(S.playX, "w-4 h-4");
+  },
+  updateStageDOM(ph = S.phase) {
+    const stg = S.stages[ph], curPhase = PHASES[ph], scT = TS[curPhase.colorKey];
+    curPhase.stages.forEach((_, idx) => {
+      const panel = document.getElementById(`stage-panel-${idx + 1}`);
+      if (panel) {
+        panel.className = `col-start-1 row-start-1 space-y-3 transition-opacity duration-150 ${
+          stg === idx + 1 ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none select-none"
+        }`;
+      }
+      const btn = document.getElementById(`stage-btn-${idx + 1}`);
+      if (btn) {
+        btn.className = `px-2 py-1.5 rounded-lg text-[11px] font-mono text-center transition-all border ${
+          stg === idx + 1 ? `${scT.btn} theme-text-heading font-medium` : "border-transparent theme-text-muted hover:theme-text-main"
+        }`;
+      }
+    });
+  },
+  syncProc(v, ph = S.phase) {
+    S.proc = S.anims[ph] = v;
+    const prevStg = S.stages[ph], nextStg = stageFromP(ph, v);
+    S.stages[ph] = nextStg;
+    if (nextStg !== prevStg) UI.updateStageDOM(ph);
+    const fill = document.getElementById('proc-fill');
+    if (fill) {
+      fill.style.width = document.getElementById('proc-thumb').style.left = `${v * 100}%`;
+      document.getElementById('proc-input').value = v;
+      document.getElementById('btn-play-proc').innerHTML = playSvg(S.playProc);
+    }
+  },
+  selectPhase(idx) {
+    S.playProc = false; S.phase = idx;
+    resetCam();
+    S.proc = S.anims[idx];
+    UI.render();
+  },
+  selectStage(s, targetP) {
+    const ph = S.phase;
+    S.playProc = false; S.stages[ph] = s; S.proc = targetP;
+    gsap.to(S.anims, {
+      [ph]: targetP,
+      duration: 1.5,
+      ease: "power2.inOut",
+      overwrite: "auto",
+      onUpdate: () => {
+        if (S.phase === ph) {
+          S.proc = S.anims[ph];
+          const fill = document.getElementById('proc-fill');
+          if (fill) {
+            fill.style.width = document.getElementById('proc-thumb').style.left = `${S.proc * 100}%`;
+            document.getElementById('proc-input').value = S.proc;
+          }
+        }
+      }
+    });
+    UI.updateStageDOM(ph);
+  },
+  render() {
+    const ph = S.phase, stg = S.stages[ph], curPhase = PHASES[ph], scT = TS[curPhase.colorKey];
+    const curSpace = SPACES[S.spaceIdx];
+
+    const sBtn = document.getElementById('btn-space');
+    sBtn.title = `Active Visual Medium: ${curSpace.name} (${curSpace.subtitle})`;
+    sBtn.className = `px-2.5 py-1.5 rounded-lg border text-[11px] font-mono flex items-center gap-1.5 transition-all shrink-0 hover:brightness-125 ${curSpace.badgeCol}`;
+    sBtn.innerHTML = `${curSpace.icon}<span>${curSpace.name}</span>`;
+
+    document.getElementById('phase-tabs').innerHTML = PHASES.map((pItem, idx) =>
+      `<button onclick="UI.selectPhase(${idx})" class="py-2.5 text-[9px] font-mono tracking-wider uppercase transition-all ${ph === idx ? "bg-math-unitCircle/15 border-b-2 border-math-unitCircle theme-text-heading font-semibold" : "theme-text-muted hover:theme-text-main"}">${pItem.id}</button>`
+    ).join('');
+
+    let extra = `<div class="sep pt-2.5"><div class="flex items-center gap-2.5"><button id="btn-play-proc" class="w-7 h-7 rounded-md sub-box flex items-center justify-center theme-text-heading ${scT.hover} transition-colors shrink-0">${playSvg(S.playProc)}</button>${sliderHtml('proc', 0, 1, .005, S.proc, S.proc * 100, scT.fill, scT.border, false)}</div></div>`;
+
+    document.getElementById('phase-body').innerHTML = `
+      <h2 class="text-base font-semibold theme-text-heading tracking-tight">${curPhase.title}</h2>
+      <div class="grid">${
+        curPhase.stages.map(([, sBody, sEq], idx) => `
+          <div id="stage-panel-${idx + 1}" class="col-start-1 row-start-1 space-y-3 transition-opacity duration-150 ${stg === idx + 1 ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none select-none"}">
+            <p class="text-[13.5px] leading-relaxed theme-text-main font-normal">${sBody}</p>
+            <div class="sub-box rounded-xl px-3.5 py-2.5"><span class="block my-0.5">${tex(sEq, true)}</span></div>
+          </div>`
+        ).join('')
+      }</div>
+      <div class="sub-box rounded-xl p-3.5 space-y-3">
+        <div class="grid ${curPhase.cols} gap-1.5">${
+          curPhase.stages.map(([l, , , p], i) =>
+            `<button id="stage-btn-${i + 1}" onclick="UI.selectStage(${i + 1},${p ?? 1})" class="px-2 py-1.5 rounded-lg text-[11px] font-mono text-center transition-all border ${stg === i + 1 ? `${scT.btn} theme-text-heading font-medium` : "border-transparent theme-text-muted hover:theme-text-main"}">${l}</button>`
+          ).join('')
+        }</div>${extra}
+      </div>`;
+
+    document.getElementById('btn-play-proc').onclick = () => { if (!S.playProc && S.proc >= .98) UI.syncProc(0); S.playProc = !S.playProc; UI.syncProc(S.proc); };
+    document.getElementById('proc-input').oninput = e => { S.playProc = false; UI.syncProc(parseFloat(e.target.value)); };
+  }
+};
+
+window.addEventListener('load', () => { new p5(sketch); UI.init(); });
+</script>
+</body>
+</html>

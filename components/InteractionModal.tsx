@@ -36,8 +36,7 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim()) return;
-    onSubmit(prompt, selectedTemplateFilename);
+    onSubmit(prompt.trim(), selectedTemplateFilename);
   };
 
   return (
@@ -126,7 +125,7 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({
                       id="follow-up-prompt"
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="e.g., Explain this diagram in more detail..."
+                      placeholder="e.g., Explain this diagram in more detail... (leave blank for automatic natural progression)"
                       className="min-h-[100px] w-full resize-none rounded-lg border border-[#2a2a35] bg-[#1a1a24] p-3 text-[#e2e8f0] outline-none placeholder:text-[#64748b] focus:border-[#00e599]/60 focus:ring-1 focus:ring-[#00e599]/30"
                       autoFocus
                     />
@@ -152,8 +151,7 @@ export const InteractionModal: React.FC<InteractionModalProps> = ({
                 )}
                 <button
                   type="submit"
-                  disabled={!prompt.trim()}
-                  className="flex-1 rounded-lg bg-[#00e599] px-4 py-2.5 text-sm font-medium text-[#0a0a0c] transition-colors hover:bg-[#4dffc1] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex-1 rounded-lg bg-[#00e599] px-4 py-2.5 text-sm font-medium text-[#0a0a0c] transition-colors hover:bg-[#4dffc1]"
                 >
                   Generate Content
                 </button>

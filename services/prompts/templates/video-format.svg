@@ -1,0 +1,735 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+  <title id="title">video-format — Deepthink Animated Technical Video Presentation</title>
+  <desc id="desc">Animated multi-act technical presentation showing multi-agent swarm failure modes, the Deepthink lockstep iteration timeline with live workspace panels, BSR trajectory evaluation, and log-scale compute scaling curves.</desc>
+  <defs>
+    <pattern id="fineGrid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#EFEAE0" stroke-width="0.9"/>
+    </pattern>
+    <pattern id="archGrid" width="192" height="192" patternUnits="userSpaceOnUse">
+      <rect width="192" height="192" fill="url(#fineGrid)"/>
+      <path d="M 192 0 L 0 0 0 192" fill="none" stroke="#E5DFD3" stroke-width="1.2"/>
+    </pattern>
+    <radialGradient id="softStageGlow" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.48"/>
+      <stop offset="70%" stop-color="#FAF7F0" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#EAE3D2" stop-opacity="0.38"/>
+    </radialGradient>
+    <linearGradient id="chartGradGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1F8A5B" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#1F8A5B" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="chartGradViolet" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6C3CE9" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#6C3CE9" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Reusable 3D Isometric Module Cube (Green) -->
+    <g id="cubeG">
+      <ellipse cx="0" cy="11" rx="8.5" ry="3" fill="#1E1E2E" opacity="0.14"/>
+      <polygon points="0,-9.5 8.2,-4.75 0,0 -8.2,-4.75" fill="#BFEAD5" stroke="#1E1E2E" stroke-width="1.1" stroke-linejoin="round"/>
+      <polygon points="-8.2,-4.75 0,0 0,9.5 -8.2,4.75" fill="#1F8A5B" stroke="#1E1E2E" stroke-width="1.1" stroke-linejoin="round"/>
+      <polygon points="0,0 8.2,-4.75 8.2,4.75 0,9.5" fill="#14603E" stroke="#1E1E2E" stroke-width="1.1" stroke-linejoin="round"/>
+    </g>
+    <!-- Reusable Folder Icon (Amber) -->
+    <g id="folderA">
+      <path d="M 0 1.5 H 7.2 L 9.4 4 H 18.5 V 14.5 H 0 Z" fill="#FCE6C2" stroke="#C87D1E" stroke-width="1.4" stroke-linejoin="round"/>
+    </g>
+    <!-- Reusable Folder Icon (Violet) -->
+    <g id="folderV">
+      <path d="M 0 1.5 H 7.2 L 9.4 4 H 18.5 V 14.5 H 0 Z" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="1.4" stroke-linejoin="round"/>
+    </g>
+    <!-- Reusable Folder Icon (Green) -->
+    <g id="folderG">
+      <path d="M 0 1.5 H 7.2 L 9.4 4 H 18.5 V 14.5 H 0 Z" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.4" stroke-linejoin="round"/>
+    </g>
+    <!-- Reusable Folder Icon (Teal) -->
+    <g id="folderTL">
+      <path d="M 0 1.5 H 7.2 L 9.4 4 H 18.5 V 14.5 H 0 Z" fill="#D2ECEA" stroke="#197D78" stroke-width="1.4" stroke-linejoin="round"/>
+    </g>
+  </defs>
+
+  <style>
+    svg {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Google Sans", "Plus Jakarta Sans", Inter, sans-serif;
+    }
+    text {
+      dominant-baseline: central;
+    }
+
+    /* 4-Act 16-Second Continuous Video Timeline */
+    /* Act 1 (Timeline + Live Workspace): 0% - 44% (dominant hero view so initial frame is rich and iconic) */
+    @keyframes actTimeline {
+      0%, 40%   { opacity: 1; }
+      44%, 95%  { opacity: 0; }
+      99%, 100% { opacity: 1; }
+    }
+    /* Act 2 (Single vs Multi-Agent Swarm): 43% - 63% */
+    @keyframes actSwarm {
+      0%, 41%   { opacity: 0; }
+      45%, 59%  { opacity: 1; }
+      63%, 100% { opacity: 0; }
+    }
+    /* Act 3 (BSR Window Trajectory Evaluation): 62% - 81% */
+    @keyframes actBSR {
+      0%, 60%   { opacity: 0; }
+      64%, 77%  { opacity: 1; }
+      81%, 100% { opacity: 0; }
+    }
+    /* Act 4 (Compute Scaling Benchmark Chart): 80% - 98% */
+    @keyframes actChart {
+      0%, 78%   { opacity: 0; }
+      82%, 95%  { opacity: 1; }
+      99%, 100% { opacity: 0; }
+    }
+
+    /* Sub-animations inside Act 1 (Timeline) */
+    @keyframes colPop1 {
+      0%        { opacity: 0.35; }
+      3%, 44%   { opacity: 1; }
+      100%      { opacity: 1; }
+    }
+    @keyframes colPop2 {
+      0%, 2%    { opacity: 0; }
+      6%, 44%   { opacity: 1; }
+      100%      { opacity: 1; }
+    }
+    @keyframes colPop3 {
+      0%, 6%    { opacity: 0; }
+      10%, 44%  { opacity: 1; }
+      100%      { opacity: 1; }
+    }
+    @keyframes colPop4 {
+      0%, 10%   { opacity: 0; }
+      14%, 44%  { opacity: 1; }
+      100%      { opacity: 1; }
+    }
+    @keyframes busFlow {
+      0% { stroke-dashoffset: 36; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes rollbackDraw {
+      0%, 13%   { stroke-dashoffset: 650; opacity: 0; }
+      20%, 44%  { stroke-dashoffset: 0; opacity: 1; }
+      100%      { stroke-dashoffset: 0; opacity: 1; }
+    }
+    @keyframes cursorBlink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0.2; }
+    }
+    @keyframes chartDraw {
+      0%, 79% { stroke-dashoffset: 1800; }
+      91%, 100% { stroke-dashoffset: 0; }
+    }
+    @keyframes chartFillFade {
+      0%, 82% { opacity: 0; }
+      91%, 100% { opacity: 1; }
+    }
+    @keyframes scrubProgress {
+      0% { width: 0px; }
+      100% { width: 1920px; }
+    }
+
+    .scene-timeline { animation: actTimeline 16s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+    .scene-swarm    { animation: actSwarm    16s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+    .scene-bsr      { animation: actBSR      16s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+    .scene-chart    { animation: actChart    16s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+
+    .col-anim-1 { animation: colPop1 16s ease-out infinite; }
+    .col-anim-2 { animation: colPop2 16s ease-out infinite; }
+    .col-anim-3 { animation: colPop3 16s ease-out infinite; }
+    .col-anim-4 { animation: colPop4 16s ease-out infinite; }
+    .bus-flow   { stroke-dasharray: 10 8; animation: busFlow 1.2s linear infinite; }
+    .rollback-path { stroke-dasharray: 650; animation: rollbackDraw 16s ease-out infinite; }
+    .blink-cursor { animation: cursorBlink 0.9s infinite; }
+    .chart-curve { stroke-dasharray: 1800; animation: chartDraw 16s ease-out infinite; }
+    .chart-area  { animation: chartFillFade 16s ease-out infinite; }
+    .progress-bar { animation: scrubProgress 16s linear infinite; }
+  </style>
+
+  <!-- ================= STAGE BACKGROUND ================= -->
+  <rect width="1920" height="1080" fill="#FAF7F0"/>
+  <rect width="1920" height="1080" fill="url(#archGrid)" opacity="0.68"/>
+  <rect width="1920" height="1080" fill="url(#softStageGlow)"/>
+
+  <!-- ========================================================================= -->
+  <!-- ACT 1 (0% - 44%): DEEPTHINK CONTINUOUS LOOP TIMELINE + LIVE WORKSPACE     -->
+  <!-- ========================================================================= -->
+  <g class="scene-timeline">
+    <!-- Top Section Header -->
+    <text x="960" y="54" text-anchor="middle" font-size="33" font-weight="500" fill="#1E1E2E">
+      Branches iterate in lockstep while coordinating live in the <tspan font-weight="600" fill="#6C3CE9">shared workspace</tspan>
+    </text>
+
+    <!-- Left Challenge Seed Card -->
+    <g transform="translate(52, 340)">
+      <rect x="0" y="3" width="212" height="146" rx="12" fill="#1E1E2E" opacity="0.06"/>
+      <rect x="0" y="0" width="212" height="146" rx="12" fill="#FFFFFF" stroke="#1E1E2E" stroke-width="2"/>
+      <text x="106" y="44" text-anchor="middle" font-size="23" font-weight="600" fill="#1E1E2E">Challenge</text>
+      <text x="106" y="80" text-anchor="middle" font-size="16" font-weight="500" fill="#6C3CE9">Generator /</text>
+      <text x="106" y="106" text-anchor="middle" font-size="16" font-weight="500" fill="#6C3CE9">Proximity Review</text>
+    </g>
+
+    <!-- Curved Split Arrows from Challenge to 4 Strategy Lanes (LY = 212, 346, 480, 614) -->
+    <g fill="none" stroke="#6C3CE9" stroke-width="2.2" stroke-linecap="round">
+      <path d="M 264 413 Q 305 212 342 212"/>
+      <path d="M 264 413 Q 305 346 342 346"/>
+      <path d="M 264 413 Q 305 480 342 480"/>
+      <path d="M 264 413 Q 305 614 342 614"/>
+    </g>
+
+    <!-- Horizontal Dashed Strategy Rails across Viewport -->
+    <g stroke="#CFC8B8" stroke-width="2.2" stroke-dasharray="6 8" opacity="0.65">
+      <line x1="548" y1="212" x2="1860" y2="212"/>
+      <line x1="548" y1="346" x2="1860" y2="346"/>
+      <line x1="548" y1="480" x2="1860" y2="480"/>
+      <line x1="548" y1="614" x2="1860" y2="614"/>
+    </g>
+
+    <!-- 4 Strategy Lane Header Cards -->
+    <g>
+      <!-- main1 -->
+      <rect x="346" y="175" width="202" height="74" rx="10" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.8"/>
+      <text x="447" y="202" text-anchor="middle" font-size="20" font-weight="600" fill="#6C3CE9">main1</text>
+      <text x="447" y="228" text-anchor="middle" font-size="15" font-weight="500" fill="#767268">spectral bound</text>
+      <!-- main2 -->
+      <rect x="346" y="309" width="202" height="74" rx="10" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.8"/>
+      <text x="447" y="336" text-anchor="middle" font-size="20" font-weight="600" fill="#6C3CE9">main2</text>
+      <text x="447" y="362" text-anchor="middle" font-size="15" font-weight="500" fill="#767268">greedy dual</text>
+      <!-- main3 -->
+      <rect x="346" y="443" width="202" height="74" rx="10" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.8"/>
+      <text x="447" y="470" text-anchor="middle" font-size="20" font-weight="600" fill="#6C3CE9">main3</text>
+      <text x="447" y="496" text-anchor="middle" font-size="15" font-weight="500" fill="#767268">convex relax</text>
+      <!-- main4 -->
+      <rect x="346" y="577" width="202" height="74" rx="10" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.8"/>
+      <text x="447" y="604" text-anchor="middle" font-size="20" font-weight="600" fill="#6C3CE9">main4</text>
+      <text x="447" y="630" text-anchor="middle" font-size="15" font-weight="500" fill="#767268">inductive cut</text>
+    </g>
+
+    <!-- COLUMN 1: Iteration 1 (Completed / Greyed Shell) -->
+    <g class="col-anim-1" transform="translate(585, 0)">
+      <text x="148" y="120" text-anchor="middle" font-size="19" font-weight="600" fill="#767268">Iteration 1</text>
+      <rect x="0" y="144" width="296" height="540" rx="14" fill="#EAE4D7" stroke="#CFC8B8" stroke-width="1.6" opacity="0.92"/>
+      <line x1="274" y1="212" x2="274" y2="614" stroke="#CFC8B8" stroke-width="2.4"/>
+      <!-- 4 Lane Rows -->
+      <g transform="translate(16, 188)">
+        <rect width="122" height="48" rx="8" fill="#F2EDE2" stroke="#CFC8B8" stroke-width="1.5"/>
+        <text x="61" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">execute</text>
+        <line x1="122" y1="24" x2="136" y2="24" stroke="#CFC8B8" stroke-width="1.8"/>
+        <rect x="136" y="0" width="96" height="48" rx="8" fill="#F2EDE2" stroke="#CFC8B8" stroke-width="1.5"/>
+        <text x="184" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">critique</text>
+        <line x1="232" y1="24" x2="258" y2="24" stroke="#767268" stroke-width="1.8"/>
+        <circle cx="258" cy="24" r="5" fill="#767268"/>
+      </g>
+      <g transform="translate(16, 322)">
+        <rect width="122" height="48" rx="8" fill="#F2EDE2" stroke="#CFC8B8" stroke-width="1.5"/>
+        <text x="61" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">execute</text>
+        <line x1="122" y1="24" x2="136" y2="24" stroke="#CFC8B8" stroke-width="1.8"/>
+        <rect x="136" y="0" width="96" height="48" rx="8" fill="#F2EDE2" stroke="#CFC8B8" stroke-width="1.5"/>
+        <text x="184" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">critique</text>
+        <line x1="232" y1="24" x2="258" y2="24" stroke="#767268" stroke-width="1.8"/>
+        <circle cx="258" cy="24" r="5" fill="#767268"/>
+      </g>
+      <g transform="translate(16, 456)">
+        <rect width="122" height="48" rx="8" fill="#F2EDE2" stroke="#CFC8B8" stroke-width="1.5"/>
+        <text x="61" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">execute</text>
+        <line x1="122" y1="24" x2="136" y2="24" stroke="#CFC8B8" stroke-width="1.8"/>
+        <rect x="136" y="0" width="96" height="48" rx="8" fill="#F2EDE2" stroke="#CFC8B8" stroke-width="1.5"/>
+        <text x="184" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">critique</text>
+        <line x1="232" y1="24" x2="258" y2="24" stroke="#767268" stroke-width="1.8"/>
+        <circle cx="258" cy="24" r="5" fill="#767268"/>
+      </g>
+      <g transform="translate(16, 590)">
+        <rect width="122" height="48" rx="8" fill="#F2EDE2" stroke="#CFC8B8" stroke-width="1.5"/>
+        <text x="61" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">execute</text>
+        <line x1="122" y1="24" x2="136" y2="24" stroke="#CFC8B8" stroke-width="1.8"/>
+        <rect x="136" y="0" width="96" height="48" rx="8" fill="#F2EDE2" stroke="#CFC8B8" stroke-width="1.5"/>
+        <text x="184" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">critique</text>
+        <line x1="232" y1="24" x2="258" y2="24" stroke="#767268" stroke-width="1.8"/>
+        <circle cx="258" cy="24" r="5" fill="#767268"/>
+      </g>
+    </g>
+
+    <!-- COLUMN 2: Iteration 3 (Active Violet Shell with Sync Bus) -->
+    <g class="col-anim-2" transform="translate(915, 0)">
+      <text x="150" y="120" text-anchor="middle" font-size="19.5" font-weight="600" fill="#6C3CE9">Iteration 3</text>
+      <rect x="0" y="144" width="300" height="540" rx="14" fill="#E6DEFA" opacity="0.65"/>
+      <rect x="0" y="144" width="300" height="540" rx="14" fill="none" stroke="#6C3CE9" stroke-width="2.2"/>
+      <line x1="278" y1="212" x2="278" y2="614" stroke="#1F8A5B" stroke-width="3.5" stroke-linecap="round"/>
+      <!-- 4 Active Lane Rows -->
+      <g transform="translate(16, 188)">
+        <rect width="124" height="48" rx="8" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.6"/>
+        <text x="62" y="24" text-anchor="middle" font-size="16.5" font-weight="600" fill="#1E1E2E">correct</text>
+        <line x1="124" y1="24" x2="138" y2="24" stroke="#1E1E2E" stroke-width="1.8"/>
+        <rect x="138" y="0" width="98" height="48" rx="8" fill="#FCE6C2" stroke="#C87D1E" stroke-width="1.6"/>
+        <text x="187" y="24" text-anchor="middle" font-size="16.5" font-weight="600" fill="#C87D1E">critique</text>
+        <line x1="236" y1="24" x2="262" y2="24" stroke="#1F8A5B" stroke-width="1.8"/>
+        <circle cx="262" cy="24" r="5.2" fill="#1F8A5B"/>
+      </g>
+      <g transform="translate(16, 322)">
+        <rect width="124" height="48" rx="8" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.6"/>
+        <text x="62" y="24" text-anchor="middle" font-size="16.5" font-weight="600" fill="#1E1E2E">correct</text>
+        <line x1="124" y1="24" x2="138" y2="24" stroke="#1E1E2E" stroke-width="1.8"/>
+        <rect x="138" y="0" width="98" height="48" rx="8" fill="#FCE6C2" stroke="#C87D1E" stroke-width="1.6"/>
+        <text x="187" y="24" text-anchor="middle" font-size="16.5" font-weight="600" fill="#C87D1E">critique</text>
+        <line x1="236" y1="24" x2="262" y2="24" stroke="#1F8A5B" stroke-width="1.8"/>
+        <circle cx="262" cy="24" r="5.2" fill="#1F8A5B"/>
+      </g>
+      <g transform="translate(16, 456)">
+        <rect width="124" height="48" rx="8" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.6"/>
+        <text x="62" y="24" text-anchor="middle" font-size="16.5" font-weight="600" fill="#1E1E2E">correct</text>
+        <line x1="124" y1="24" x2="138" y2="24" stroke="#1E1E2E" stroke-width="1.8"/>
+        <rect x="138" y="0" width="98" height="48" rx="8" fill="#FCE6C2" stroke="#C87D1E" stroke-width="1.6"/>
+        <text x="187" y="24" text-anchor="middle" font-size="16.5" font-weight="600" fill="#C87D1E">critique</text>
+        <line x1="236" y1="24" x2="262" y2="24" stroke="#1F8A5B" stroke-width="1.8"/>
+        <circle cx="262" cy="24" r="5.2" fill="#1F8A5B"/>
+      </g>
+      <g transform="translate(16, 590)">
+        <rect width="124" height="48" rx="8" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.6"/>
+        <text x="62" y="24" text-anchor="middle" font-size="16.5" font-weight="600" fill="#1E1E2E">correct</text>
+        <line x1="124" y1="24" x2="138" y2="24" stroke="#1E1E2E" stroke-width="1.8"/>
+        <rect x="138" y="0" width="98" height="48" rx="8" fill="#FCE6C2" stroke="#C87D1E" stroke-width="1.6"/>
+        <text x="187" y="24" text-anchor="middle" font-size="16.5" font-weight="600" fill="#C87D1E">critique</text>
+        <line x1="236" y1="24" x2="262" y2="24" stroke="#1F8A5B" stroke-width="1.8"/>
+        <circle cx="262" cy="24" r="5.2" fill="#1F8A5B"/>
+      </g>
+    </g>
+
+    <!-- COLUMN 3: Heartbeat 1 · Modules (Green Shell with 3D Isometric Cubes) -->
+    <g class="col-anim-3" transform="translate(1248, 0)">
+      <text x="150" y="120" text-anchor="middle" font-size="19.5" font-weight="600" fill="#1F8A5B">Heartbeat 1 · Modules</text>
+      <rect x="0" y="144" width="300" height="540" rx="14" fill="#D4EFE1" opacity="0.72"/>
+      <rect x="0" y="144" width="300" height="540" rx="14" fill="none" stroke="#1F8A5B" stroke-width="2.2"/>
+      <line x1="278" y1="212" x2="278" y2="614" stroke="#1F8A5B" stroke-width="3.2"/>
+      <!-- Row 1: m1, m2 -->
+      <g transform="translate(16, 188)">
+        <rect width="232" height="48" rx="8" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="1.7"/>
+        <use href="#cubeG" x="26" y="24"/>
+        <use href="#cubeG" x="50" y="24"/>
+        <text x="218" y="24" text-anchor="end" font-size="16" font-weight="600" fill="#1F8A5B">m1, m2</text>
+        <line x1="232" y1="24" x2="262" y2="24" stroke="#1F8A5B" stroke-width="1.8"/>
+        <circle cx="262" cy="24" r="5.2" fill="#1F8A5B"/>
+      </g>
+      <!-- Row 2: m1 -->
+      <g transform="translate(16, 322)">
+        <rect width="232" height="48" rx="8" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="1.7"/>
+        <use href="#cubeG" x="26" y="24"/>
+        <text x="218" y="24" text-anchor="end" font-size="16" font-weight="600" fill="#1F8A5B">m1</text>
+        <line x1="232" y1="24" x2="262" y2="24" stroke="#1F8A5B" stroke-width="1.8"/>
+        <circle cx="262" cy="24" r="5.2" fill="#1F8A5B"/>
+      </g>
+      <!-- Row 3: m1, m2, m3 -->
+      <g transform="translate(16, 456)">
+        <rect width="232" height="48" rx="8" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="1.7"/>
+        <use href="#cubeG" x="26" y="24"/>
+        <use href="#cubeG" x="50" y="24"/>
+        <use href="#cubeG" x="74" y="24"/>
+        <text x="218" y="24" text-anchor="end" font-size="16" font-weight="600" fill="#1F8A5B">m1, m2, m3</text>
+        <line x1="232" y1="24" x2="262" y2="24" stroke="#1F8A5B" stroke-width="1.8"/>
+        <circle cx="262" cy="24" r="5.2" fill="#1F8A5B"/>
+      </g>
+      <!-- Row 4: m1, m3 -->
+      <g transform="translate(16, 590)">
+        <rect width="232" height="48" rx="8" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="1.7"/>
+        <use href="#cubeG" x="26" y="24"/>
+        <use href="#cubeG" x="50" y="24"/>
+        <text x="218" y="24" text-anchor="end" font-size="16" font-weight="600" fill="#1F8A5B">m1, m3</text>
+        <line x1="232" y1="24" x2="262" y2="24" stroke="#1F8A5B" stroke-width="1.8"/>
+        <circle cx="262" cy="24" r="5.2" fill="#1F8A5B"/>
+      </g>
+    </g>
+
+    <!-- COLUMN 4: Global Update · BSR (Decisions + Rollback Arrow) -->
+    <g class="col-anim-4" transform="translate(1580, 0)">
+      <text x="148" y="120" text-anchor="middle" font-size="19.5" font-weight="600" fill="#C94438">Global Update · BSR</text>
+      <rect x="0" y="144" width="296" height="540" rx="14" fill="#F9D8D4" opacity="0.65"/>
+      <rect x="0" y="144" width="296" height="540" rx="14" fill="none" stroke="#C94438" stroke-width="2.2"/>
+      <line x1="274" y1="212" x2="274" y2="614" stroke="#C94438" stroke-width="3.2"/>
+      <!-- CONTINUE -->
+      <g transform="translate(16, 188)">
+        <rect width="228" height="48" rx="8" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="2"/>
+        <text x="114" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#1F8A5B">CONTINUE</text>
+        <line x1="228" y1="24" x2="258" y2="24" stroke="#C94438" stroke-width="1.8"/>
+        <circle cx="258" cy="24" r="5.2" fill="#C94438"/>
+      </g>
+      <!-- PRUNE -->
+      <g transform="translate(16, 322)">
+        <rect width="228" height="48" rx="8" fill="#F9D8D4" stroke="#C94438" stroke-width="2"/>
+        <text x="114" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">PRUNE</text>
+        <line x1="228" y1="24" x2="258" y2="24" stroke="#C94438" stroke-width="1.8"/>
+        <circle cx="258" cy="24" r="5.2" fill="#C94438"/>
+      </g>
+      <!-- EVOLVE (ROLLBACK) -->
+      <g transform="translate(16, 456)">
+        <rect width="228" height="48" rx="8" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="2"/>
+        <text x="114" y="24" text-anchor="middle" font-size="15.5" font-weight="600" fill="#6C3CE9">EVOLVE (ROLLBACK)</text>
+        <line x1="228" y1="24" x2="258" y2="24" stroke="#C94438" stroke-width="1.8"/>
+        <circle cx="258" cy="24" r="5.2" fill="#C94438"/>
+      </g>
+      <!-- CONTINUE -->
+      <g transform="translate(16, 590)">
+        <rect width="228" height="48" rx="8" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="2"/>
+        <text x="114" y="24" text-anchor="middle" font-size="16" font-weight="600" fill="#1F8A5B">CONTINUE</text>
+        <line x1="228" y1="24" x2="258" y2="24" stroke="#C94438" stroke-width="1.8"/>
+        <circle cx="258" cy="24" r="5.2" fill="#C94438"/>
+      </g>
+    </g>
+
+    <!-- Orthogonal Rollback Arrow from Global Update back to Iteration 3 on Lane 3 -->
+    <g class="rollback-path">
+      <path d="M 1680 456 V 412 H 1005 V 456" fill="none" stroke="#6C3CE9" stroke-width="2.8" stroke-linejoin="round"/>
+      <polygon points="1005,456 999,446 1011,446" fill="#6C3CE9"/>
+      <rect x="1175" y="396" width="336" height="30" rx="6" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="1.5"/>
+      <text x="1343" y="411" text-anchor="middle" font-size="14.5" font-weight="600" fill="#6C3CE9">git checkout iter_03 -- Strategy-3/</text>
+    </g>
+
+    <!-- Orthogonal Shared Bus Routing from Timeline down to Live Bottom Panel -->
+    <path d="M 1526 614 V 748 H 644 V 770" fill="none" stroke="#1F8A5B" stroke-width="2.8" class="bus-flow"/>
+    <rect x="1020" y="734" width="128" height="26" rx="6" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.4"/>
+    <text x="1084" y="747" text-anchor="middle" font-size="13.5" font-weight="600" fill="#1F8A5B">shared bus</text>
+
+    <!-- ================= BOTTOM 3-COLUMN LIVE WORKSPACE PANEL (PY = 770) ================= -->
+    <g transform="translate(0, 770)">
+      <rect x="0" y="0" width="1920" height="310" fill="#F2EDE2"/>
+      <line x1="0" y1="0" x2="1920" y2="0" stroke="#1E1E2E" stroke-width="2.2"/>
+      <line x1="644" y1="14" x2="644" y2="298" stroke="#CFC8B8" stroke-width="1.5"/>
+      <line x1="1276" y1="14" x2="1276" y2="298" stroke="#CFC8B8" stroke-width="1.5"/>
+
+      <!-- SECTION 1: shared_workspace.md · live agent stream -->
+      <rect x="16" y="14" width="612" height="32" rx="8" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="1.6"/>
+      <text x="32" y="30" font-size="15.5" font-weight="600" fill="#6C3CE9">shared_workspace.md · live agent stream</text>
+      <rect x="16" y="54" width="612" height="240" rx="10" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.6"/>
+      <g stroke="#DED8CA" stroke-width="1.1">
+        <line x1="28" y1="94" x2="616" y2="94"/>
+        <line x1="28" y1="134" x2="616" y2="134"/>
+        <line x1="28" y1="174" x2="616" y2="174"/>
+        <line x1="28" y1="214" x2="616" y2="214"/>
+        <line x1="28" y1="254" x2="616" y2="254"/>
+      </g>
+      <g font-size="13.2" font-weight="500">
+        <text x="30" y="74" fill="#1F8A5B">nice catch, switching to spectral gap lower bound lambda_2 &gt;= k - 2*sqrt(k-1)</text>
+        <text x="30" y="114" fill="#197D78">convex_relax.lean compiled clean in Mathlib with zero sorrys</text>
+        <text x="30" y="154" fill="#1E1E2E">pulled hb1_m3_isomorphic_map.py into inductive step, 0 counterexamples</text>
+        <text x="30" y="194" fill="#C94438">hold on Strategy-3 just tried a rank-6 relaxation and broke the upper bound</text>
+        <text x="30" y="234" fill="#6C3CE9" font-weight="600">reverted Strategy-3 back to the iter_03 checkpoint, way cleaner from there</text>
+        <text x="30" y="274" fill="#1F8A5B" font-weight="600">combining restored iter_03 base with cut invariant closes n &gt; 8 <tspan fill="#1F8A5B" class="blink-cursor">▎</tspan></text>
+      </g>
+
+      <!-- SECTION 2: shared_self_improving_harness (/tmp/) -->
+      <rect x="660" y="14" width="600" height="32" rx="8" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.6"/>
+      <text x="676" y="30" font-size="15.5" font-weight="600" fill="#1F8A5B">shared_self_improving_harness</text>
+      <use href="#folderA" x="1168" y="22"/>
+      <text x="1192" y="30" font-size="13.8" font-weight="600" fill="#1E1E2E">/tmp/</text>
+
+      <!-- Sub-box 2A: verification_suite/ -->
+      <rect x="660" y="54" width="293" height="240" rx="10" fill="#FFFFFF" stroke="#C87D1E" stroke-width="1.5"/>
+      <rect x="668" y="62" width="277" height="34" rx="7" fill="#FCE6C2" stroke="#C87D1E" stroke-width="1.3"/>
+      <use href="#folderA" x="678" y="71"/>
+      <text x="704" y="79" font-size="14.5" font-weight="600" fill="#1E1E2E">verification_suite/</text>
+      <g font-size="13.8" font-weight="600">
+        <rect x="688" y="106" width="252" height="32" rx="7" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="1.4"/>
+        <text x="704" y="122" fill="#1E1E2E">verifier_core.py</text>
+        <rect x="688" y="148" width="252" height="32" rx="7" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.4"/>
+        <text x="704" y="164" fill="#1E1E2E">fuzz_runner.py</text>
+        <rect x="688" y="190" width="252" height="32" rx="7" fill="#FCE6C2" stroke="#C87D1E" stroke-width="1.8"/>
+        <text x="704" y="206" fill="#C87D1E">bounds_check.py</text>
+        <rect x="688" y="232" width="252" height="32" rx="7" fill="#FFFFFF" stroke="#197D78" stroke-width="1.4"/>
+        <text x="704" y="248" fill="#1E1E2E">spectral_cert.lean</text>
+      </g>
+
+      <!-- Sub-box 2B: Helpful_Modules/ -->
+      <rect x="967" y="54" width="293" height="240" rx="10" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="2"/>
+      <rect x="975" y="62" width="277" height="34" rx="7" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.3"/>
+      <use href="#folderG" x="985" y="71"/>
+      <text x="1011" y="79" font-size="14.5" font-weight="600" fill="#1F8A5B">Helpful_Modules/</text>
+      <g font-size="13.5" font-weight="600">
+        <rect x="995" y="106" width="252" height="32" rx="7" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="1.7"/>
+        <text x="1010" y="122" fill="#6C3CE9">hb1_m1_spectral_test.py</text>
+        <rect x="995" y="148" width="252" height="32" rx="7" fill="#D2ECEA" stroke="#197D78" stroke-width="1.7"/>
+        <text x="1010" y="164" fill="#197D78">hb1_m3_isomorphic_map.py</text>
+        <rect x="995" y="190" width="252" height="32" rx="7" fill="#D2ECEA" stroke="#197D78" stroke-width="1.7"/>
+        <text x="1010" y="206" fill="#197D78">hb1_m3_convex_relax.lean</text>
+        <rect x="995" y="232" width="252" height="32" rx="7" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.7"/>
+        <text x="1010" y="248" fill="#1F8A5B">hb2_m2_cut_invariant.py</text>
+      </g>
+
+      <!-- SECTION 3: live repository filesystem (/workspace/) -->
+      <rect x="1292" y="14" width="612" height="32" rx="8" fill="#D2ECEA" stroke="#197D78" stroke-width="1.6"/>
+      <text x="1308" y="30" font-size="15.5" font-weight="600" fill="#197D78">live repository filesystem</text>
+      <use href="#folderTL" x="1764" y="22"/>
+      <text x="1788" y="30" font-size="13.8" font-weight="600" fill="#1E1E2E">/workspace/</text>
+
+      <!-- Strategy-1..4 Directories -->
+      <g font-size="14" font-weight="600">
+        <rect x="1292" y="54" width="298" height="52" rx="8" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.6"/>
+        <use href="#folderV" x="1306" y="72"/>
+        <text x="1332" y="80" fill="#1E1E2E">Strategy-1/</text>
+        <rect x="1454" y="67" width="126" height="26" rx="6" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.3"/>
+        <text x="1517" y="80" text-anchor="middle" font-size="12.5" fill="#1F8A5B">iter_01..next.md</text>
+
+        <rect x="1292" y="116" width="298" height="52" rx="8" fill="#FFFFFF" stroke="#C94438" stroke-width="1.6"/>
+        <use href="#folderV" x="1306" y="134"/>
+        <text x="1332" y="142" fill="#1E1E2E">Strategy-2/</text>
+        <rect x="1454" y="129" width="126" height="26" rx="6" fill="#F9D8D4" stroke="#C94438" stroke-width="1.3"/>
+        <text x="1517" y="142" text-anchor="middle" font-size="12.5" fill="#C94438">new strategy.md</text>
+
+        <rect x="1292" y="178" width="298" height="52" rx="8" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.6"/>
+        <use href="#folderV" x="1306" y="196"/>
+        <text x="1332" y="204" fill="#1E1E2E">Strategy-3/</text>
+        <rect x="1454" y="191" width="126" height="26" rx="6" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="1.3"/>
+        <text x="1517" y="204" text-anchor="middle" font-size="12.5" fill="#6C3CE9">rev iter_03.md</text>
+
+        <rect x="1292" y="240" width="298" height="52" rx="8" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.6"/>
+        <use href="#folderV" x="1306" y="258"/>
+        <text x="1332" y="266" fill="#1E1E2E">Strategy-4/</text>
+        <rect x="1454" y="253" width="126" height="26" rx="6" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.3"/>
+        <text x="1517" y="266" text-anchor="middle" font-size="12.5" fill="#1F8A5B">iter_01..next.md</text>
+      </g>
+
+      <!-- Right Repo History Cards -->
+      <g font-size="14" font-weight="600">
+        <rect x="1604" y="54" width="300" height="74" rx="9" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="1.8"/>
+        <use href="#folderV" x="1618" y="67"/>
+        <text x="1644" y="75" fill="#6C3CE9">strategies_history/</text>
+        <rect x="1618" y="92" width="272" height="26" rx="6" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="1.2"/>
+        <text x="1754" y="105" text-anchor="middle" font-size="12.5" fill="#6C3CE9">seed.md · update_01.md</text>
+
+        <rect x="1604" y="138" width="300" height="74" rx="9" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.8"/>
+        <use href="#folderG" x="1618" y="151"/>
+        <text x="1644" y="159" fill="#1F8A5B">Modules/</text>
+        <rect x="1618" y="176" width="272" height="26" rx="6" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="1.2"/>
+        <text x="1754" y="189" text-anchor="middle" font-size="12.5" fill="#1F8A5B">Heartbeat-1 / Module-1..3</text>
+
+        <rect x="1604" y="222" width="300" height="72" rx="9" fill="#FFFFFF" stroke="#197D78" stroke-width="1.6"/>
+        <use href="#folderTL" x="1618" y="235"/>
+        <text x="1644" y="243" fill="#1E1E2E">DOS_history/</text>
+        <rect x="1618" y="258" width="272" height="26" rx="6" fill="#D2ECEA" stroke="#197D78" stroke-width="1.2"/>
+        <text x="1754" y="271" text-anchor="middle" font-size="12.5" fill="#197D78">dos_hb_01.md · dos_gu_01.md</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- ACT 2 (43% - 63%): SINGLE MODEL LOOP VS MULTI-AGENT SWARM FAILURE MODES   -->
+  <!-- ========================================================================= -->
+  <g class="scene-swarm" opacity="0">
+    <!-- Left Column: Autonomous Single Model -->
+    <text x="96" y="104" font-size="38" font-weight="600" fill="#1E1E2E">Models are already smart enough;</text>
+    <text x="96" y="154" font-size="25" font-weight="500" fill="#767268">left alone they will figure out:</text>
+    <g font-size="27" font-weight="600" fill="#1E1E2E">
+      <circle cx="114" cy="232" r="8" fill="#1F8A5B"/><text x="144" y="232">how to complete a given task &amp; verify it</text>
+      <circle cx="114" cy="318" r="8" fill="#1F8A5B"/><text x="144" y="318">how to build &amp; strengthen their own verification</text>
+      <circle cx="114" cy="404" r="8" fill="#1F8A5B"/><text x="144" y="404">how to find gaps in their work</text>
+      <circle cx="114" cy="490" r="8" fill="#1F8A5B"/><text x="144" y="490">self-correction</text>
+    </g>
+
+    <!-- Center Divider -->
+    <line x1="960" y1="82" x2="960" y2="608" stroke="#CFC8B8" stroke-width="1.6"/>
+
+    <!-- Right Column: Multi-Agent Failure Dimensions -->
+    <text x="1016" y="104" font-size="38" font-weight="600" fill="#1E1E2E">Put them in a multi-agent system</text>
+    <text x="1016" y="154" font-size="25" font-weight="500" fill="#767268">and they fail terribly at various dimensions</text>
+    <g font-size="27" font-weight="500" fill="#1E1E2E">
+      <circle cx="1034" cy="232" r="8" fill="#C94438"/><text x="1064" y="232">major duplicate work</text>
+      <circle cx="1034" cy="318" r="9" fill="#C94438"/><text x="1064" y="318" font-weight="600" fill="#C94438">context blowup</text>
+      <circle cx="1034" cy="404" r="8" fill="#C94438"/><text x="1064" y="404">failing to carry forward high signal state</text>
+      <circle cx="1034" cy="490" r="8" fill="#C94438"/><text x="1064" y="490">failing to build upon other agents' work</text>
+      <text x="1064" y="558" font-size="23" fill="#767268">... etc etc</text>
+    </g>
+
+    <!-- Bottom Vis: Isolated Swarm Loops Without Shared State -->
+    <line x1="96" y1="636" x2="1824" y2="636" stroke="#CFC8B8" stroke-width="1.6"/>
+    <text x="96" y="672" font-size="19" font-weight="600" fill="#C94438">Multi-Agent Swarm · Isolated Local Loops Without Shared State</text>
+
+    <rect x="108" y="760" width="234" height="152" rx="12" fill="#F9D8D4" stroke="#C94438" stroke-width="2.2"/>
+    <text x="225" y="818" text-anchor="middle" font-size="20" font-weight="600" fill="#C94438">Extremely Hard</text>
+    <text x="225" y="852" text-anchor="middle" font-size="20" font-weight="600" fill="#C94438">Problem</text>
+
+    <!-- 3 Isolated Agent Lanes (y = 734, 836, 938) -->
+    <g>
+      <path d="M 342 836 L 386 734 H 420" fill="none" stroke="#CFC8B8" stroke-width="1.8"/>
+      <path d="M 342 836 H 420" fill="none" stroke="#CFC8B8" stroke-width="1.8"/>
+      <path d="M 342 836 L 386 938 H 420" fill="none" stroke="#CFC8B8" stroke-width="1.8"/>
+
+      <!-- Lane 1 -->
+      <rect x="420" y="706" width="340" height="56" rx="10" fill="#FFFFFF" stroke="#1E1E2E" stroke-width="1.7"/>
+      <circle cx="446" cy="734" r="6" fill="#1F8A5B"/><text x="464" y="734" font-size="18" font-weight="600" fill="#1E1E2E">Agent 1</text>
+      <line x1="562" y1="718" x2="562" y2="750" stroke="#CFC8B8" stroke-width="1.3"/>
+      <text x="660" y="734" text-anchor="middle" font-size="16" font-weight="600" fill="#1F8A5B">work &lt;-&gt; self-correct</text>
+      <rect x="812" y="710" width="198" height="48" rx="8" fill="#F9D8D4" stroke="#C94438" stroke-width="1.7"/>
+      <text x="911" y="734" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">same idea #1 (dup)</text>
+      <rect x="1044" y="710" width="184" height="48" rx="8" fill="#FCE6C2" stroke="#C94438" stroke-width="1.8"/>
+      <text x="1136" y="734" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">context blowup</text>
+      <rect x="1270" y="712" width="156" height="44" rx="8" fill="#FFFFFF" stroke="#CFC8B8" stroke-width="1.5"/>
+      <text x="1348" y="734" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">signal lost</text>
+      <circle cx="1486" cy="734" r="13" fill="#F9D8D4" stroke="#C94438" stroke-width="1.8"/><text x="1486" y="734" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">x</text>
+
+      <!-- Lane 2 -->
+      <rect x="420" y="808" width="340" height="56" rx="10" fill="#FFFFFF" stroke="#1E1E2E" stroke-width="1.7"/>
+      <circle cx="446" cy="836" r="6" fill="#1F8A5B"/><text x="464" y="836" font-size="18" font-weight="600" fill="#1E1E2E">Agent 2</text>
+      <line x1="562" y1="820" x2="562" y2="852" stroke="#CFC8B8" stroke-width="1.3"/>
+      <text x="660" y="836" text-anchor="middle" font-size="16" font-weight="600" fill="#1F8A5B">work &lt;-&gt; self-correct</text>
+      <rect x="812" y="812" width="198" height="48" rx="8" fill="#F9D8D4" stroke="#C94438" stroke-width="1.7"/>
+      <text x="911" y="836" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">same idea #1 (dup)</text>
+      <rect x="1044" y="812" width="184" height="48" rx="8" fill="#FCE6C2" stroke="#C94438" stroke-width="1.8"/>
+      <text x="1136" y="836" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">context blowup</text>
+      <rect x="1270" y="814" width="156" height="44" rx="8" fill="#FFFFFF" stroke="#CFC8B8" stroke-width="1.5"/>
+      <text x="1348" y="836" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">signal lost</text>
+      <circle cx="1486" cy="836" r="13" fill="#F9D8D4" stroke="#C94438" stroke-width="1.8"/><text x="1486" y="836" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">x</text>
+
+      <!-- Lane 3 -->
+      <rect x="420" y="910" width="340" height="56" rx="10" fill="#FFFFFF" stroke="#1E1E2E" stroke-width="1.7"/>
+      <circle cx="446" cy="938" r="6" fill="#1F8A5B"/><text x="464" y="938" font-size="18" font-weight="600" fill="#1E1E2E">Agent 3</text>
+      <line x1="562" y1="922" x2="562" y2="954" stroke="#CFC8B8" stroke-width="1.3"/>
+      <text x="660" y="938" text-anchor="middle" font-size="16" font-weight="600" fill="#1F8A5B">work &lt;-&gt; self-correct</text>
+      <rect x="812" y="914" width="198" height="48" rx="8" fill="#F9D8D4" stroke="#C94438" stroke-width="1.7"/>
+      <text x="911" y="938" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">same idea #1 (dup)</text>
+      <rect x="1044" y="914" width="184" height="48" rx="8" fill="#FCE6C2" stroke="#C94438" stroke-width="1.8"/>
+      <text x="1136" y="938" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">context blowup</text>
+      <rect x="1270" y="916" width="156" height="44" rx="8" fill="#FFFFFF" stroke="#CFC8B8" stroke-width="1.5"/>
+      <text x="1348" y="938" text-anchor="middle" font-size="16" font-weight="600" fill="#767268">signal lost</text>
+      <circle cx="1486" cy="938" r="13" fill="#F9D8D4" stroke="#C94438" stroke-width="1.8"/><text x="1486" y="938" text-anchor="middle" font-size="16" font-weight="600" fill="#C94438">x</text>
+    </g>
+
+    <rect x="1528" y="710" width="268" height="252" rx="12" fill="#FFFFFF" stroke="#C94438" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="1662" y="802" text-anchor="middle" font-size="19" font-weight="600" fill="#C94438">Shared Compounding</text>
+    <text x="1662" y="834" text-anchor="middle" font-size="19" font-weight="600" fill="#C94438">Progress</text>
+    <text x="1662" y="884" text-anchor="middle" font-size="16.5" font-weight="600" fill="#767268">fails to converge</text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- ACT 3 (62% - 81%): BSR WINDOW TRAJECTORY EVALUATION CARDS                 -->
+  <!-- ========================================================================= -->
+  <g class="scene-bsr" opacity="0">
+    <text x="960" y="66" text-anchor="middle" font-size="33" font-weight="500" fill="#1E1E2E">
+      Depending on the branch, clean it up by either <tspan font-weight="600" fill="#1F8A5B">distilling,</tspan> <tspan font-weight="600" fill="#C94438">pruning</tspan> or <tspan font-weight="600" fill="#6C3CE9">evolving</tspan> its contents
+    </text>
+
+    <!-- Card 1: main1 · Steady Progress (CONTINUE) -->
+    <g transform="translate(115, 152)">
+      <rect width="530" height="690" rx="14" fill="#FFFFFF" stroke="#CFC8B8" stroke-width="1.8"/>
+      <text x="265" y="42" text-anchor="middle" font-size="23.5" font-weight="600" fill="#1E1E2E">main1 · Steady Progress</text>
+      <line x1="35" y1="72" x2="495" y2="72" stroke="#DED8CA" stroke-width="1.2"/>
+      <line x1="55" y1="283" x2="475" y2="283" stroke="#CFC8B8" stroke-width="1.6" stroke-dasharray="4 4"/>
+      <polyline points="95,267 180,233 265,198 350,165 435,136" fill="none" stroke="#1F8A5B" stroke-width="3.4"/>
+      <circle cx="95" cy="267" r="7.5" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="2.5"/>
+      <circle cx="180" cy="233" r="7.5" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="2.5"/>
+      <circle cx="265" cy="198" r="7.5" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="2.5"/>
+      <circle cx="350" cy="165" r="7.5" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="2.5"/>
+      <circle cx="435" cy="136" r="7.5" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="2.5"/>
+      <text x="44" y="402" font-size="19.5" font-weight="600" fill="#1E1E2E">drift: +0.62 (rising)</text>
+      <text x="44" y="438" font-size="18" font-weight="500" fill="#767268">progress_kept: 0.78</text>
+      <rect x="35" y="485" width="460" height="20" rx="10" fill="#1F8A5B"/>
+      <rect x="35" y="530" width="460" height="120" rx="11" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="2.2"/>
+      <text x="265" y="568" text-anchor="middle" font-size="25" font-weight="600" fill="#1F8A5B">CONTINUE</text>
+      <text x="265" y="610" text-anchor="middle" font-size="17" font-weight="500" fill="#1E1E2E">worthy of another window · fold memory bank</text>
+    </g>
+
+    <!-- Card 2: main3 · Peak Then Regress (EVOLVE ROLLBACK) -->
+    <g transform="translate(695, 152)">
+      <rect width="530" height="690" rx="14" fill="#FFFFFF" stroke="#CFC8B8" stroke-width="1.8"/>
+      <text x="265" y="42" text-anchor="middle" font-size="23.5" font-weight="600" fill="#1E1E2E">main3 · Peak Then Regress</text>
+      <line x1="35" y1="72" x2="495" y2="72" stroke="#DED8CA" stroke-width="1.2"/>
+      <line x1="55" y1="283" x2="475" y2="283" stroke="#CFC8B8" stroke-width="1.6" stroke-dasharray="4 4"/>
+      <polyline points="95,260 180,193 265,140" fill="none" stroke="#6C3CE9" stroke-width="3.4"/>
+      <polyline points="265,140 350,229 435,337" fill="none" stroke="#C94438" stroke-width="3.4"/>
+      <circle cx="95" cy="260" r="7.5" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="2.5"/>
+      <circle cx="180" cy="193" r="7.5" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="2.5"/>
+      <circle cx="265" cy="140" r="10" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="2.8"/>
+      <text x="265" y="112" text-anchor="middle" font-size="16.5" font-weight="600" fill="#6C3CE9">peak (Iter 3)</text>
+      <circle cx="350" cy="229" r="7.5" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="2.5"/>
+      <circle cx="435" cy="337" r="7.5" fill="#FFFFFF" stroke="#C94438" stroke-width="2.5"/>
+      <text x="44" y="402" font-size="19.5" font-weight="600" fill="#1E1E2E">lost_ground: 0.53 (high)</text>
+      <text x="44" y="438" font-size="18" font-weight="500" fill="#767268">best checkpoint: Iteration 3</text>
+      <rect x="35" y="485" width="460" height="20" rx="10" fill="#6C3CE9"/>
+      <rect x="35" y="530" width="460" height="120" rx="11" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="2.2"/>
+      <text x="265" y="568" text-anchor="middle" font-size="25" font-weight="600" fill="#6C3CE9">EVOLVE (ROLLBACK)</text>
+      <text x="265" y="610" text-anchor="middle" font-size="17" font-weight="500" fill="#1E1E2E">restore Iteration 3 &amp; rewrite strategy</text>
+    </g>
+
+    <!-- Card 3: main2 · Saturated / Stalled (PRUNE) -->
+    <g transform="translate(1275, 152)">
+      <rect width="530" height="690" rx="14" fill="#FFFFFF" stroke="#CFC8B8" stroke-width="1.8"/>
+      <text x="265" y="42" text-anchor="middle" font-size="23.5" font-weight="600" fill="#1E1E2E">main2 · Saturated / Stalled</text>
+      <line x1="35" y1="72" x2="495" y2="72" stroke="#DED8CA" stroke-width="1.2"/>
+      <line x1="55" y1="283" x2="475" y2="283" stroke="#CFC8B8" stroke-width="1.6" stroke-dasharray="4 4"/>
+      <polyline points="95,275 180,289 265,280 350,292 435,286" fill="none" stroke="#C94438" stroke-width="3.4"/>
+      <circle cx="95" cy="275" r="7.5" fill="#FFFFFF" stroke="#C94438" stroke-width="2.5"/>
+      <circle cx="180" cy="289" r="7.5" fill="#FFFFFF" stroke="#C94438" stroke-width="2.5"/>
+      <circle cx="265" cy="280" r="7.5" fill="#FFFFFF" stroke="#C94438" stroke-width="2.5"/>
+      <circle cx="350" cy="292" r="7.5" fill="#FFFFFF" stroke="#C94438" stroke-width="2.5"/>
+      <circle cx="435" cy="286" r="7.5" fill="#FFFFFF" stroke="#C94438" stroke-width="2.5"/>
+      <text x="44" y="402" font-size="19.5" font-weight="600" fill="#1E1E2E">stall_evidence: 0.71</text>
+      <text x="44" y="438" font-size="18" font-weight="500" fill="#767268">progress_kept: 0.04 (near zero)</text>
+      <rect x="35" y="485" width="460" height="20" rx="10" fill="#C94438"/>
+      <rect x="35" y="530" width="460" height="120" rx="11" fill="#F9D8D4" stroke="#C94438" stroke-width="2.2"/>
+      <text x="265" y="568" text-anchor="middle" font-size="25" font-weight="600" fill="#C94438">PRUNE</text>
+      <text x="265" y="610" text-anchor="middle" font-size="17" font-weight="500" fill="#1E1E2E">archive branch &amp; plant fresh strategy</text>
+    </g>
+
+    <text x="960" y="936" text-anchor="middle" font-size="24" font-weight="500" fill="#767268">
+      Then we give these decisions to strategies-update-agent and proceed with the evolved strategies.
+    </text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- ACT 4 (80% - 98%): COMPUTE SCALING BENCHMARK CHART                        -->
+  <!-- ========================================================================= -->
+  <g class="scene-chart" opacity="0">
+    <text x="104" y="98" font-size="46" font-weight="600" fill="#1E1E2E">BrokenArxiv (Matharena)</text>
+    <text x="1816" y="96" text-anchor="end" font-size="72" font-weight="700" fill="#6C3CE9">200.0M</text>
+    <text x="1816" y="146" text-anchor="end" font-size="14" font-weight="600" fill="#767268" letter-spacing="0.08em">OUTPUT TOKENS / PROBLEM</text>
+
+    <!-- Horizontal Grid Lines (0% to 80%) -->
+    <g font-size="16.5" font-weight="600" fill="#767268" text-anchor="end">
+      <line x1="148" y1="196" x2="1560" y2="196" stroke="#DED8CA" stroke-width="1.2"/><text x="128" y="196">80%</text>
+      <line x1="148" y1="366" x2="1560" y2="366" stroke="#DED8CA" stroke-width="1.2"/><text x="128" y="366">60%</text>
+      <line x1="148" y1="536" x2="1560" y2="536" stroke="#DED8CA" stroke-width="1.2"/><text x="128" y="536">40%</text>
+      <line x1="148" y1="706" x2="1560" y2="706" stroke="#DED8CA" stroke-width="1.2"/><text x="128" y="706">20%</text>
+      <line x1="148" y1="876" x2="1560" y2="876" stroke="#CFC8B8" stroke-width="1.8"/><text x="128" y="876">0%</text>
+    </g>
+
+    <!-- X-Axis Log Ticks -->
+    <g font-size="16" font-weight="600" fill="#767268" text-anchor="middle">
+      <text x="148" y="906">30K</text>
+      <text x="341" y="906">100K</text>
+      <text x="600" y="906">500K</text>
+      <text x="822" y="906">2M</text>
+      <text x="1081" y="906">10M</text>
+      <text x="1340" y="906">50M</text>
+      <text x="1560" y="906">200M</text>
+      <text x="854" y="942" font-size="17.5">Output Tokens / Problem</text>
+    </g>
+
+    <!-- Baselines -->
+    <line x1="148" y1="710" x2="1560" y2="710" stroke="#C87D1E" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="1576" y="710" font-size="14" font-weight="600" fill="#C87D1E">Single-Agent Loop Baseline (19.5%)</text>
+    <line x1="148" y1="757" x2="1560" y2="757" stroke="#C94438" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="1576" y="757" font-size="14" font-weight="600" fill="#C94438">Standard Pass@1 Baseline (14.0%)</text>
+
+    <!-- Shaded Area Fills -->
+    <path class="chart-area" d="M 148 876 L 148 757 L 320 750 L 520 725 L 720 665 L 920 500 L 1120 372 L 1320 338 L 1560 326 L 1560 876 Z" fill="url(#chartGradGreen)"/>
+    <path class="chart-area" d="M 148 876 L 148 757 L 320 753 L 520 736 L 720 695 L 920 575 L 1120 458 L 1320 416 L 1560 408 L 1560 876 Z" fill="url(#chartGradViolet)"/>
+
+    <!-- Animated Scaling Curves -->
+    <path class="chart-curve" d="M 148 757 L 320 750 L 520 725 L 720 665 L 920 500 L 1120 372 L 1320 338 L 1560 326" fill="none" stroke="#1F8A5B" stroke-width="4.5" stroke-linecap="round"/>
+    <path class="chart-curve" d="M 148 757 L 320 753 L 520 736 L 720 695 L 920 575 L 1120 458 L 1320 416 L 1560 408" fill="none" stroke="#6C3CE9" stroke-width="4" stroke-linecap="round"/>
+    <path class="chart-curve" d="M 148 757 L 230 736 L 310 721 L 440 710" fill="none" stroke="#C87D1E" stroke-width="3.2" stroke-linecap="round"/>
+
+    <!-- End Badges -->
+    <circle cx="1560" cy="326" r="6.5" fill="#FFFFFF" stroke="#1F8A5B" stroke-width="3"/>
+    <rect x="1584" y="311" width="210" height="30" rx="15" fill="#D4EFE1" stroke="#1F8A5B" stroke-width="1.8"/>
+    <circle cx="1598" cy="326" r="4.5" fill="#1F8A5B"/>
+    <text x="1610" y="326" font-size="14" font-weight="600" fill="#1E1E2E">Qwen-3.8-27B</text>
+    <text x="1782" y="326" text-anchor="end" font-size="15" font-weight="700" fill="#1F8A5B">64.7%</text>
+
+    <circle cx="1560" cy="408" r="6.5" fill="#FFFFFF" stroke="#6C3CE9" stroke-width="3"/>
+    <rect x="1584" y="393" width="210" height="30" rx="15" fill="#E6DEFA" stroke="#6C3CE9" stroke-width="1.8"/>
+    <circle cx="1598" cy="408" r="4.5" fill="#6C3CE9"/>
+    <text x="1610" y="408" font-size="14" font-weight="600" fill="#1E1E2E">Gemma4-35B</text>
+    <text x="1782" y="408" text-anchor="end" font-size="15" font-weight="700" fill="#6C3CE9">55.0%</text>
+  </g>
+
+  <!-- Subtle Video Scrubber Progress Bar at Bottom Edge -->
+  <rect x="0" y="1074" width="1920" height="6" fill="#DED8CA" opacity="0.6"/>
+  <rect x="0" y="1074" width="1920" height="6" fill="#6C3CE9" class="progress-bar"/>
+</svg>

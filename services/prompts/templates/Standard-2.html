@@ -4,19 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Information Theory: From Surprise to Channel Capacity</title>
+    <title>Interactive Protocol & Visual Workbench</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
-    <!-- KaTeX for pristine mathematical typography -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
     <script>
         (function () {
-            const savedTheme = localStorage.getItem('infotheory-theme') || 'dark';
+            const savedTheme = localStorage.getItem('workbench-theme') || 'dark';
             if (savedTheme === 'light') {
                 document.documentElement.classList.remove('dark');
             } else {
@@ -167,34 +166,13 @@
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--color-border);
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--color-text-muted);
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        /* Transparent Glass Slider Implementation */
         input[type=range].glass-slider {
             -webkit-appearance: none;
             width: 100%;
@@ -234,11 +212,6 @@
             transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease;
         }
 
-        input[type=range].glass-slider::-moz-range-thumb:hover {
-            transform: scale(1.15);
-            box-shadow: 0 0 15px var(--color-accent-glow), inset 0 0 4px rgba(0, 0, 0, 0.2);
-        }
-
         .pattern-grid {
             background-image: linear-gradient(var(--pattern-color) 1px, transparent 1px),
                 linear-gradient(90deg, var(--pattern-color) 1px, transparent 1px);
@@ -257,155 +230,34 @@
 <body>
     <div id="root"></div>
 
+    <!-- AGENT GUIDE: Preserve this Obsidian/Emerald split-pane workbench layout (left `ArticleReader` with its `w-80` index sidebar and bottom theme/font dock; right `pattern-grid` interactive workbench with tab navigation, top high-DPI `<canvas>`/WebGL visualizer, control panels, and `RelatedReading` links). Populate `YAP_CONTENT` with clear, mechanism-first sections, map sections to tabs in `VIS_TABS` and `SECTION_TO_TAB`, and replace `InteractiveCanvasPlaceholder` and `WorkbenchDashboardPlaceholder` with bespoke interactive visualizations and controls tailored to the user's prompt. -->
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+        import React, { useEffect, useRef, useCallback } from 'react';
         import { createRoot } from 'react-dom/client';
         import { create } from 'zustand';
-        import { z } from 'zod';
         import { clsx } from 'clsx';
         import { twMerge } from 'tailwind-merge';
         import _ from 'lodash';
-        import * as math from 'mathjs';
         import * as Lucide from 'lucide-react';
-        import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid } from 'recharts';
-
-        /* ==================== UTILITIES & CONSTANTS ==================== */
 
         const cn = (...inputs) => twMerge(clsx(inputs));
 
-        // Schema validation for configuration
-        const SimConfigSchema = z.object({
-            binaryP: z.number().min(0.0001).max(0.9999),
-            channelNoise: z.number().min(0.0).max(0.5),
-            snrDb: z.number().min(-10.0).max(40.0),
-            bandwidth: z.number().min(1).max(100),
-            speed: z.number().min(1).max(100)
-        });
-
         const VIS_TABS = Object.freeze({
-            ENTROPY: 'entropy',
-            HUFFMAN: 'huffman',
-            MUTUAL: 'mutual',
-            CHANNEL: 'channel',
-            DIVERGENCE: 'divergence'
+            TAB_1: 'tab-1',
+            TAB_2: 'tab-2'
         });
 
         const YAP_CONTENT = Object.freeze([
             {
-                id: "sec-problem",
-                title: "1. The Fundamental Problem of Communication",
-                text: "The fundamental problem of communication, as framed by Claude Shannon in 1948, is that of reproducing at one point either exactly or approximately a message selected at another point. Frequently the messages have meaning; that is, they refer to or are correlated according to some system with certain physical or conceptual entities. These semantic aspects of communication are irrelevant to the engineering problem. The engineering task does not concern what the message signifies, but how many distinct possible messages could have been sent, and with what probabilities each choice occurs. When transmission is viewed this way, information is stripped of psychological context. It becomes a purely statistical property of a choice mechanism.",
-                equation: "H(X) = -\\sum_{x \\in \\mathcal{X}} P(x) \\log_2 P(x)"
-            },
-            {
-                id: "sec-surprise",
-                title: "2. The Mathematical Construction of Surprise",
-                text: "To quantify information, Shannon searched for a function measuring the 'surprise' or self-information of an event x occurring with probability P(x). If an event is guaranteed (P(x) = 1), its occurrence gives us zero new information. If an event is vanishingly rare, its realization conveys immense information. Furthermore, if two independent events x and y occur, the information conveyed by observing both must equal the sum of their individual surprises: I(x, y) = I(x) + I(y). Because P(x, y) = P(x)P(y), the only continuous function converting multiplication into addition while maintaining monotonicity is the negative logarithm: I(x) = -log_b(P(x)). When the base is 2, the unit of measurement is the bit, equivalent to the information gained when learning the outcome of an unbiased coin toss.",
-                equation: "I(x) = -\\log_2 P(x) = \\log_2\\left(\\frac{1}{P(x)}\\right)"
-            },
-            {
-                id: "sec-shannon-entropy",
-                title: "3. Shannon Entropy: Expected Uncertainty",
-                text: "Entropy H(X) is the mathematical expectation of the self-information over the entire ensemble of possible outcomes. It represents the average number of bits required to describe the state of the random variable X. For an ensemble with N outcomes, entropy is minimized at zero when one outcome is certain (no uncertainty exists), and maximized at log_2(N) when all outcomes are equiprobable. If you toss a fair coin, H(X) = -(0.5 log_2 0.5 + 0.5 log_2 0.5) = 1.0 bit. If the coin is heavily biased toward heads with probability 0.99, H(X) collapses to 0.08 bits, reflecting the fact that almost no unexpected change will ever happen upon flipping.",
-                equation: "H(X) = \\mathbb{E}[I(X)] = -\\sum_{i=1}^N p_i \\log_2 p_i"
-            },
-            {
-                id: "sec-binary-entropy",
-                title: "4. The Binary Entropy Function and Concavity",
-                text: "When a random variable takes on only two outcomes with probabilities p and 1-p, its entropy is governed by the binary entropy function H_b(p) = -p log_2 p - (1-p) log_2(1-p). This function is strictly concave on the interval [0, 1], reaching its global maximum of exactly 1 bit at p = 0.5, and vanishing smoothly to 0 as p approaches 0 or 1 (evaluated via L'Hopital's rule where lim_{p->0} p log p = 0). The concavity of entropy is not a mathematical accident: it proves that mixing two probability distributions always increases or preserves total uncertainty. This property is formalized by Jensen's inequality and underpins the Second Law of Thermodynamics.",
-                equation: "H_b(p) = -p \\log_2 p - (1-p) \\log_2 (1-p)"
-            },
-            {
-                id: "sec-source-coding",
-                title: "5. The Source Coding Theorem and Kraft's Inequality",
-                text: "Can arbitrary information be compressed indefinitely? Shannon's Source Coding Theorem establishes that the entropy H(X) is a hard, physical lower bound on the average code length of any lossless compression scheme. To ensure unique decodability without special delimiter symbols, a code must be prefix-free: no codeword can be a prefix of any other codeword. For any such prefix-free code with codeword lengths l_1, l_2, ..., l_N over an alphabet of size D, Kraft's inequality states that the sum of D^{-l_i} must be less than or equal to 1. The optimal codeword length for symbol i is precisely its self-information l_i = -log_2(p_i). When these lengths are integers, the expected length L satisfies H(X) <= L < H(X) + 1.",
-                equation: "\\sum_{i=1}^N 2^{-l_i} \\le 1 \\quad \\implies \\quad L = \\sum_{i=1}^N p_i l_i \\ge H(X)"
-            },
-            {
-                id: "sec-huffman",
-                title: "6. Optimal Variable-Length Prefixes: Huffman Coding",
-                text: "David Huffman solved the problem of constructing the provably optimal prefix-free code for a known probability distribution. His algorithm works bottom-up by treating each symbol as a leaf node in a binary tree. At each step, the two nodes with the lowest probabilities are joined into an internal parent node whose probability is their sum. This process repeats until a single root node with probability 1.0 remains. Assigning 0 to left edges and 1 to right edges yields codewords where frequent symbols reside close to the root with short bit sequences, while rare symbols are pushed down into longer branches. The resulting expected code length is guaranteed to be within one bit of Shannon's entropy limit.",
-                equation: "L_{\\text{Huffman}} = \\sum_{x \\in \\mathcal{X}} P(x) \\cdot \\text{len}(\\text{code}(x)) < H(X) + 1"
-            },
-            {
-                id: "sec-joint-entropy",
-                title: "7. Multivariate Systems: Joint and Conditional Entropy",
-                text: "When two random variables X and Y interact, their combined uncertainty is quantified by the joint entropy H(X, Y), computed over their joint probability distribution P(X, Y). If X and Y are completely independent, knowing one tells us nothing about the other, and H(X, Y) = H(X) + H(Y). If they are correlated, observing Y removes some uncertainty regarding X. The remaining uncertainty is the conditional entropy H(X|Y). The chain rule of information demonstrates that the total joint entropy decomposes as the entropy of Y plus the conditional entropy of X given Y: H(X, Y) = H(Y) + H(X|Y).",
-                equation: "H(X, Y) = -\\sum_{x, y} P(x, y) \\log_2 P(x, y) = H(Y) + H(X|Y)"
-            },
-            {
-                id: "sec-conditioning",
-                title: "8. Conditioning Never Increases Entropy",
-                text: "A cornerstone theorem of information theory states that information cannot hurt: conditioning on an extra random variable can never increase expected uncertainty. Mathematically, H(X|Y) <= H(X), with equality holding if and only if X and Y are statistically independent. It is vital to understand that this theorem applies to the average conditional entropy over all values of Y. For a single specific observation y, it is entirely possible that H(X|Y=y) > H(X). However, when averaged across all possible values of y according to their probabilities P(y), the net uncertainty regarding X is strictly reduced or unaltered.",
-                equation: "H(X|Y) = \\sum_{y} P(y) H(X|Y=y) \\le H(X)"
-            },
-            {
-                id: "sec-mutual-info",
-                title: "9. Mutual Information: Shared Uncertainty Reduction",
-                text: "Mutual information I(X; Y) measures how much information X and Y share. It represents the reduction in uncertainty of X achieved by learning Y, or symmetrically, the reduction in uncertainty of Y achieved by learning X. While conditional entropy is asymmetric (H(X|Y) != H(Y|X)), mutual information is strictly symmetric: I(X; Y) = I(Y; X). If X and Y are independent, I(X; Y) = 0 bits. If X is a deterministic, invertible function of Y, then all uncertainty is eliminated upon observation, and I(X; Y) = H(X) = H(Y). Mutual information is the general non-linear analog of covariance in statistical mechanics.",
-                equation: "I(X; Y) = H(X) - H(X|Y) = H(Y) - H(Y|X) = H(X) + H(Y) - H(X, Y)"
-            },
-            {
-                id: "sec-venn-diagram",
-                title: "10. The Information Venn Diagram and Set Duality",
-                text: "Information quantities possess an exact duality with classical set theory. We can visualize the relations as an information Venn diagram where the left circle represents H(X) and the right circle represents H(Y). The non-overlapping crescent on the left corresponds to H(X|Y), the crescent on the right is H(Y|X), the central overlapping lens is the mutual information I(X; Y), and the total union of both circles represents the joint entropy H(X, Y). Just as the union of two sets satisfies |A U B| = |A| + |B| - |A n B|, information satisfies H(X, Y) = H(X) + H(Y) - I(X; Y).",
-                equation: "H(X, Y) = H(X|Y) + H(Y|X) + I(X; Y)"
-            },
-            {
-                id: "sec-kl-divergence",
-                title: "11. Relative Entropy: Kullback-Leibler Divergence",
-                text: "What price do you pay if you believe an ensemble follows probability distribution Q(x), but reality actually follows distribution P(x)? The Kullback-Leibler (KL) divergence D_KL(P || Q), also called relative entropy, quantifies the statistical distance from Q to P. Specifically, it measures the average number of extra bits wasted per symbol if you encode data from distribution P using a code optimized for distribution Q. A fundamental property known as Gibbs' inequality guarantees that D_KL(P || Q) >= 0, with equality if and only if P = Q almost everywhere. Because D_KL(P || Q) != D_KL(Q || P), relative entropy is not a true metric: it is an asymmetric geometric divergence on the probability simplex.",
-                equation: "D_{\\text{KL}}(P \\parallel Q) = \\sum_{x \\in \\mathcal{X}} P(x) \\log_2\\left(\\frac{P(x)}{Q(x)}\\right)"
-            },
-            {
-                id: "sec-cross-entropy",
-                title: "12. Cross-Entropy in Modern Optimization",
-                text: "Expanding the definition of KL divergence reveals its deep tie to modern machine learning loss functions. We can write D_KL(P || Q) = \\sum P(x) log(P(x)) - \\sum P(x) log(Q(x)) = -H(P) + H(P, Q), where H(P, Q) is the cross-entropy between P and Q. When training neural networks for classification, P represents the true one-hot ground-truth label distribution (whose entropy H(P) is 0), and Q represents the model's predicted softmax distribution. Minimizing the cross-entropy loss H(P, Q) with respect to model parameters is mathematically identical to minimizing the KL divergence D_KL(P || Q), driving the model's output distribution toward the underlying truth.",
-                equation: "H(P, Q) = -\\sum_{x \\in \\mathcal{X}} P(x) \\log_2 Q(x) = H(P) + D_{\\text{KL}}(P \\parallel Q)"
-            },
-            {
-                id: "sec-channels",
-                title: "13. Discrete Memoryless Channels and Noise",
-                text: "A communication channel is a physical medium characterized by an input alphabet X, an output alphabet Y, and a set of transition probabilities P(y|x) denoting the likelihood of receiving symbol y given that symbol x was transmitted. The channel is 'memoryless' if the noise acting on the current symbol is statistically independent of all past inputs and outputs. The canonical model is the Binary Symmetric Channel (BSC): bits 0 and 1 are transmitted, but each bit suffers an inversion (flip) with crossover probability p. If p = 0, the channel is perfectly transparent. If p = 0.5, every output bit is purely random noise, destroying all correlation between sender and receiver.",
-                equation: "P(Y=y | X=x) = \\begin{bmatrix} 1-p & p \\\\ p & 1-p \\end{bmatrix}"
-            },
-            {
-                id: "sec-capacity",
-                title: "14. Channel Capacity: The Supremum of Mutual Information",
-                text: "How much actual information can a noisy channel carry per channel use? The channel capacity C is defined as the maximum possible mutual information I(X; Y) between the input and output, maximized over all possible input probability distributions P(X). The physical hardware determines the conditional probabilities P(Y|X); the engineer controls only the input distribution P(X). For the Binary Symmetric Channel, mutual information is maximized when inputs 0 and 1 are sent with equal probability (P(0) = P(1) = 0.5). Under this uniform prior, the capacity evaluates to C = 1 - H_b(p) bits per channel use. When p = 0.5, C = 1 - 1 = 0 bits.",
-                equation: "C = \\max_{P(X)} I(X; Y) = 1 - H_b(p) \\quad \\text{[for BSC]}"
-            },
-            {
-                id: "sec-noisy-coding",
-                title: "15. Shannon's Noisy-Channel Coding Theorem",
-                text: "Prior to Shannon, engineers believed that the only way to reduce transmission error to zero through a noisy channel was to reduce transmission rate to zero (e.g., repeating each bit an infinite number of times). Shannon shocked the world by proving the Noisy-Channel Coding Theorem: for any transmission rate R strictly less than channel capacity C (R < C), there exist error-correcting block codes of length n such that the probability of decoding error approaches zero as n tends to infinity. Conversely, transmitting at any rate R > C makes reliable communication mathematically impossible. Shannon proved this not by constructing a single code, but through random coding arguments and high-dimensional sphere packing.",
-                equation: "\\forall R < C, \\; \\exists \\text{ code of rate } R \\text{ with } \\lim_{n \\to \\infty} P_e^{(n)} = 0"
-            },
-            {
-                id: "sec-continuous-shannon",
-                title: "16. Continuous Ensembles and the Shannon-Hartley Theorem",
-                text: "Extending information theory to continuous signals requires differential entropy h(X) = -\\int f(x) log_2 f(x) dx. Unlike discrete entropy, differential entropy can be negative and depends on the coordinate scaling. However, mutual information I(X; Y) remains invariant under invertible coordinate transformations. For a continuous channel constrained by average signal power P and corrupted by Additive White Gaussian Noise (AWGN) with noise power N across bandwidth B, the maximum entropy distribution is a Gaussian. This yields the celebrated Shannon-Hartley Theorem: the channel capacity in bits per second is C = B log_2(1 + SNR), where SNR = P/N. This single formula sets the ultimate upper speed limit of all telecommunications, Wi-Fi, 5G, and satellite links.",
-                equation: "C = B \\log_2\\left(1 + \\frac{P}{N_0 B}\\right) = B \\log_2(1 + \\text{SNR})"
+                id: "sec-1",
+                title: "1. Section Title Placeholder",
+                text: "Replace this placeholder with clear, mechanism-first lesson prose explaining the core problem, state transitions, and underlying intuition.",
+                equation: "f(x) = \\dots"
             }
         ]);
 
         const SECTION_TO_TAB = Object.freeze({
-            "sec-problem": VIS_TABS.ENTROPY,
-            "sec-surprise": VIS_TABS.ENTROPY,
-            "sec-shannon-entropy": VIS_TABS.ENTROPY,
-            "sec-binary-entropy": VIS_TABS.ENTROPY,
-            "sec-source-coding": VIS_TABS.HUFFMAN,
-            "sec-huffman": VIS_TABS.HUFFMAN,
-            "sec-joint-entropy": VIS_TABS.MUTUAL,
-            "sec-conditioning": VIS_TABS.MUTUAL,
-            "sec-mutual-info": VIS_TABS.MUTUAL,
-            "sec-venn-diagram": VIS_TABS.MUTUAL,
-            "sec-kl-divergence": VIS_TABS.DIVERGENCE,
-            "sec-cross-entropy": VIS_TABS.DIVERGENCE,
-            "sec-channels": VIS_TABS.CHANNEL,
-            "sec-capacity": VIS_TABS.CHANNEL,
-            "sec-noisy-coding": VIS_TABS.CHANNEL,
-            "sec-continuous-shannon": VIS_TABS.CHANNEL
+            "sec-1": VIS_TABS.TAB_1
         });
 
         const TAB_TO_SECTIONS = _.reduce(SECTION_TO_TAB, (acc, tab, sectionId) => {
@@ -414,296 +266,27 @@
             return acc;
         }, {});
 
-        /* ==================== CORE INFORMATION ALGORITHMS ==================== */
-
-        // Binary Entropy Hb(p)
-        function binaryEntropy(p) {
-            if (p <= 0.0 || p >= 1.0) return 0.0;
-            return -p * Math.log2(p) - (1.0 - p) * Math.log2(1.0 - p);
-        }
-
-        // Discrete Entropy for an array of probabilities
-        function discreteEntropy(probs) {
-            let sum = 0.0;
-            for (let i = 0; i < probs.length; i++) {
-                const p = probs[i];
-                if (p > 1e-12) {
-                    sum -= p * Math.log2(p);
-                }
-            }
-            return sum;
-        }
-
-        // Huffman Tree Node and Algorithm
-        class HuffmanNode {
-            constructor(symbol, freq, left = null, right = null) {
-                this.symbol = symbol;
-                this.freq = freq;
-                this.left = left;
-                this.right = right;
-            }
-            isLeaf() {
-                return this.left === null && this.right === null;
-            }
-        }
-
-        function buildHuffmanTree(symbolFreqMap) {
-            const nodes = Object.entries(symbolFreqMap).map(([sym, freq]) => new HuffmanNode(sym, freq));
-            if (nodes.length === 0) return null;
-            if (nodes.length === 1) {
-                return new HuffmanNode(null, nodes[0].freq, nodes[0], null);
-            }
-
-            while (nodes.length > 1) {
-                nodes.sort((a, b) => a.freq - b.freq);
-                const left = nodes.shift();
-                const right = nodes.shift();
-                const parent = new HuffmanNode(null, left.freq + right.freq, left, right);
-                nodes.push(parent);
-            }
-            return nodes[0];
-        }
-
-        function generateHuffmanCodes(root, prefix = "", codeMap = {}) {
-            if (!root) return codeMap;
-            if (root.isLeaf()) {
-                codeMap[root.symbol] = prefix || "0";
-                return codeMap;
-            }
-            if (root.left) generateHuffmanCodes(root.left, prefix + "0", codeMap);
-            if (root.right) generateHuffmanCodes(root.right, prefix + "1", codeMap);
-            return codeMap;
-        }
-
-        // Hamming (7,4) Code Engine
-        // Generator matrix G (4x7) and Parity-check matrix H (3x7)
-        const HAMMING_G = [
-            [1, 1, 0, 1],
-            [1, 0, 1, 1],
-            [1, 0, 0, 0],
-            [0, 1, 1, 1],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]
-        ];
-
-        function encodeHamming74(d) {
-            // d: array of 4 bits [d1, d2, d3, d4]
-            const p1 = d[0] ^ d[1] ^ d[3];
-            const p2 = d[0] ^ d[2] ^ d[3];
-            const d1 = d[0];
-            const p3 = d[1] ^ d[2] ^ d[3];
-            const d2 = d[1];
-            const d3 = d[2];
-            const d4 = d[3];
-            return [p1, p2, d1, p3, d2, d3, d4];
-        }
-
-        function decodeHamming74(r) {
-            // r: received 7 bits
-            const s1 = r[0] ^ r[2] ^ r[4] ^ r[6];
-            const s2 = r[1] ^ r[2] ^ r[5] ^ r[6];
-            const s3 = r[3] ^ r[4] ^ r[5] ^ r[6];
-            const syndrome = s1 + (s2 << 1) + (s3 << 2); // 1-indexed error position
-            const corrected = [...r];
-            let errorDetected = false;
-            let errorIndex = -1;
-
-            if (syndrome > 0 && syndrome <= 7) {
-                errorDetected = true;
-                errorIndex = syndrome - 1;
-                corrected[errorIndex] ^= 1;
-            }
-            // Extracted data: indices 2, 4, 5, 6
-            const data = [corrected[2], corrected[4], corrected[5], corrected[6]];
-            return { syndrome, errorDetected, errorIndex, corrected, data };
-        }
-
-        /* ==================== STATE MANAGEMENT (ZUSTAND) ==================== */
-
-        const useInfoStore = create((set, get) => ({
-            // Navigation and Visual layout
-            activeTab: VIS_TABS.ENTROPY,
+        const useWorkbenchStore = create((set, get) => ({
+            activeTab: VIS_TABS.TAB_1,
             activeSection: YAP_CONTENT[0].id,
             mobileView: 'simulation',
-            theme: localStorage.getItem('infotheory-theme') || 'dark',
+            theme: localStorage.getItem('workbench-theme') || 'dark',
             fontSizeMultiplier: 1.0,
+            paramValue: 0.5,
 
-            // Global simulation engine tick
-            isRunning: true,
-            speed: 50,
-            renderTick: 0,
-
-            // Tab 1: Entropy & Surprise
-            binaryP: 0.5,
-            categoricalProbs: [0.25, 0.25, 0.25, 0.25],
-            symbolAlphabet: ['A', 'B', 'C', 'D'],
-            generatedStream: [],
-            streamEntropy: 0,
-
-            // Tab 2: Huffman & Compression
-            sampleText: "INFORMATION THEORY SHANNON 1948",
-            huffmanTree: null,
-            huffmanCodes: {},
-            compressionStats: { rawBits: 0, huffmanBits: 0, entropyBits: 0, ratio: 0 },
-
-            // Tab 3: Mutual Information & Joint Topography
-            // Joint matrix 2x2 for X and Y
-            jointP: [
-                [0.4, 0.1],
-                [0.1, 0.4]
-            ],
-
-            // Tab 4: Channel & Shannon Limit
-            channelNoise: 0.1,
-            channelType: 'BSC', // 'BSC' or 'BEC'
-            snrDb: 15.0,
-            bandwidth: 20, // kHz
-            channelPackets: [],
-            totalPacketsSent: 0,
-            totalPacketsFlipped: 0,
-            totalPacketsCorrected: 0,
-
-            // Tab 5: KL Divergence & Simplex
-            distP: [0.5, 0.3, 0.2],
-            distQ: [0.333, 0.333, 0.334],
-            gaussP: { mu: 0.0, sigma: 1.0 },
-            gaussQ: { mu: 1.2, sigma: 1.4 },
-
-            // Actions
             toggleTheme: () => {
                 const newTheme = get().theme === 'dark' ? 'light' : 'dark';
                 set({ theme: newTheme });
-                localStorage.setItem('infotheory-theme', newTheme);
+                localStorage.setItem('workbench-theme', newTheme);
                 document.documentElement.classList.toggle('dark', newTheme === 'dark');
             },
             increaseFontSize: () => set(state => ({ fontSizeMultiplier: Math.min(1.5, state.fontSizeMultiplier + 0.1) })),
             decreaseFontSize: () => set(state => ({ fontSizeMultiplier: Math.max(0.8, state.fontSizeMultiplier - 0.1) })),
-            setSpeed: (speed) => set({ speed }),
             setActiveTab: (tab) => set({ activeTab: tab }),
             setActiveSection: (secId) => set({ activeSection: secId }),
             setMobileView: (view) => set({ mobileView: view }),
-
-            // Tab 1 setters
-            setBinaryP: (p) => set({ binaryP: Math.max(0.001, Math.min(0.999, p)) }),
-            setCategoricalProb: (index, val) => {
-                const current = [...get().categoricalProbs];
-                current[index] = val;
-                // Re-normalize others
-                const remainingSum = 1.0 - val;
-                const oldRemainingSum = _.sum(current.filter((_, i) => i !== index));
-                const updated = current.map((p, i) => {
-                    if (i === index) return val;
-                    if (oldRemainingSum === 0) return remainingSum / (current.length - 1);
-                    return (p / oldRemainingSum) * remainingSum;
-                });
-                set({ categoricalProbs: updated });
-            },
-
-            // Tab 2 setters
-            setSampleText: (text) => {
-                const clean = text.toUpperCase();
-                set({ sampleText: clean });
-                get().recomputeHuffman();
-            },
-            recomputeHuffman: () => {
-                const text = get().sampleText;
-                if (!text || text.length === 0) return;
-                const freqs = {};
-                for (let ch of text) {
-                    freqs[ch] = (freqs[ch] || 0) + 1;
-                }
-                const total = text.length;
-                const probs = Object.values(freqs).map(count => count / total);
-                const entropy = discreteEntropy(probs);
-                const tree = buildHuffmanTree(freqs);
-                const codes = generateHuffmanCodes(tree);
-
-                let huffmanBits = 0;
-                for (let ch of text) {
-                    huffmanBits += codes[ch] ? codes[ch].length : 0;
-                }
-                const rawBits = text.length * 8; // 8-bit ASCII
-                const theoreticalMinBits = entropy * total;
-                const ratio = rawBits > 0 ? (1 - (huffmanBits / rawBits)) * 100 : 0;
-
-                set({
-                    huffmanTree: tree,
-                    huffmanCodes: codes,
-                    compressionStats: {
-                        rawBits,
-                        huffmanBits,
-                        entropyBits: theoreticalMinBits,
-                        ratio
-                    }
-                });
-            },
-
-            // Tab 3 setters
-            setJointCell: (row, col, value) => {
-                const matrix = _.cloneDeep(get().jointP);
-                matrix[row][col] = Math.max(0, value);
-                // Re-normalize matrix to sum to 1.0
-                const sum = _.sum(_.flatten(matrix));
-                if (sum > 0) {
-                    for (let r = 0; r < matrix.length; r++) {
-                        for (let c = 0; c < matrix[r].length; c++) {
-                            matrix[r][c] /= sum;
-                        }
-                    }
-                }
-                set({ jointP: matrix });
-            },
-
-            // Tab 4 setters
-            setChannelNoise: (noise) => set({ channelNoise: Math.max(0.0, Math.min(0.5, noise)) }),
-            setSnrDb: (snr) => set({ snrDb: snr }),
-            setBandwidth: (bw) => set({ bandwidth: bw }),
-            transmitPacket: () => {
-                const { channelNoise } = get();
-                const rawData = [
-                    Math.random() > 0.5 ? 1 : 0,
-                    Math.random() > 0.5 ? 1 : 0,
-                    Math.random() > 0.5 ? 1 : 0,
-                    Math.random() > 0.5 ? 1 : 0
-                ];
-                const encoded = encodeHamming74(rawData);
-                const received = encoded.map(bit => (Math.random() < channelNoise ? bit ^ 1 : bit));
-                const decodeResult = decodeHamming74(received);
-                const isExactMatch = rawData.every((bit, i) => bit === decodeResult.data[i]);
-
-                const newPacket = {
-                    id: Math.random().toString(36).substring(2, 8),
-                    data: rawData,
-                    encoded,
-                    received,
-                    decodeResult,
-                    isSuccess: isExactMatch,
-                    flippedBits: encoded.map((bit, idx) => bit !== received[idx])
-                };
-
-                set(state => ({
-                    channelPackets: [newPacket, ...state.channelPackets].slice(0, 12),
-                    totalPacketsSent: state.totalPacketsSent + 1,
-                    totalPacketsFlipped: state.totalPacketsFlipped + (newPacket.decodeResult.errorDetected ? 1 : 0),
-                    totalPacketsCorrected: state.totalPacketsCorrected + (newPacket.isSuccess && newPacket.decodeResult.errorDetected ? 1 : 0)
-                }));
-            },
-            resetChannelStats: () => set({
-                channelPackets: [],
-                totalPacketsSent: 0,
-                totalPacketsFlipped: 0,
-                totalPacketsCorrected: 0
-            }),
-
-            // Tab 5 setters
-            setGaussP: (params) => set(s => ({ gaussP: { ...s.gaussP, ...params } })),
-            setGaussQ: (params) => set(s => ({ gaussQ: { ...s.gaussQ, ...params } })),
-            setDistP: (newP) => set({ distP: newP }),
-            setDistQ: (newQ) => set({ distQ: newQ })
+            setParamValue: (val) => set({ paramValue: val })
         }));
-
-        /* ==================== REUSABLE UI COMPONENTS ==================== */
 
         class ErrorBoundary extends React.Component {
             constructor(props) {
@@ -715,7 +298,7 @@
                 if (this.state.hasError) {
                     return (
                         <div className="p-6 bg-danger10 border border-danger text-danger rounded-xl font-mono text-sm">
-                            <h2 className="text-lg font-bold mb-2 flex items-center gap-2"><Lucide.AlertTriangle /> Quantum Collapse in Rendering Engine</h2>
+                            <h2 className="text-lg font-bold mb-2 flex items-center gap-2"><Lucide.AlertTriangle /> Rendering Error</h2>
                             <p>{this.state.error?.message}</p>
                         </div>
                     );
@@ -724,9 +307,8 @@
             }
         }
 
-        // Custom Glass Slider matching the design system
         const GlassSlider = React.memo(({ label, symbol, min, max, step, value, onChange, formatDigits = 3 }) => {
-            const { theme } = useInfoStore();
+            const { theme } = useWorkbenchStore();
             const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
             const handleInput = useCallback((e) => onChange(parseFloat(e.target.value)), [onChange]);
 
@@ -747,20 +329,6 @@
                         />
                     </div>
                 </div>
-            );
-        });
-
-        const IconButton = React.memo(({ icon: Icon, onClick, variant = 'default', className = "", title }) => {
-            const baseClass = "flex items-center justify-center p-2 rounded-lg transition-all duration-200 shadow-sm border focus:outline-none focus:ring-2 focus:ring-accent";
-            const variants = {
-                default: "bg-surface border-border text-textMuted hover:text-textMain hover:border-textMuted",
-                accent: "bg-accent10 text-accent hover:bg-accent20 border-accent20",
-                danger: "bg-danger10 text-danger hover:bg-danger20 border-danger20"
-            };
-            return (
-                <button onClick={onClick} title={title} className={cn(baseClass, variants[variant], className)}>
-                    <Icon size={18} />
-                </button>
             );
         });
 
@@ -786,7 +354,7 @@
             if (!sectionIds || sectionIds.length === 0) return null;
             return (
                 <div className="mt-8 pt-6 border-t border-border/50">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-textMuted block mb-4">Related Axiom Protocol</span>
+                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-textMuted block mb-4">Related Section</span>
                     <div className="flex flex-col gap-2">
                         {sectionIds.map(id => {
                             const sec = YAP_CONTENT.find(s => s.id === id);
@@ -795,7 +363,7 @@
                                 <button key={id}
                                     onClick={() => {
                                         document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        useInfoStore.setState({ activeSection: id, mobileView: 'protocol' });
+                                        useWorkbenchStore.setState({ activeSection: id, mobileView: 'protocol' });
                                     }}
                                     className="px-4 py-3 rounded-xl text-xs font-medium bg-surface hover:bg-accent10 hover:text-accent border border-border hover:border-accent30 transition-all duration-200 flex items-center gap-3 text-left w-max max-w-full shadow-sm"
                                 >
@@ -809,12 +377,9 @@
             );
         };
 
-        /* ==================== HIGH PERFORMANCE VISUALIZERS ==================== */
-
-        // Tab 1 Visualizer: Interactive Binary Entropy Curve with Tangent Line
-        const BinaryEntropyCanvas = ({ p, onPChange }) => {
+        const InteractiveCanvasPlaceholder = ({ value }) => {
             const canvasRef = useRef(null);
-            const { theme } = useInfoStore();
+            const { theme } = useWorkbenchStore();
 
             useEffect(() => {
                 const canvas = canvasRef.current;
@@ -826,1080 +391,68 @@
                 canvas.height = rect.height * dpr;
                 ctx.scale(dpr, dpr);
 
-                const width = rect.width;
-                const height = rect.height;
-                const padding = 40;
-
-                // Background
                 ctx.fillStyle = theme === 'light' ? '#ffffff' : '#0f0f13';
-                ctx.fillRect(0, 0, width, height);
+                ctx.fillRect(0, 0, rect.width, rect.height);
 
-                // Grid lines
-                ctx.strokeStyle = theme === 'light' ? '#e2e8f0' : '#22222a';
-                ctx.lineWidth = 1;
-                for (let i = 0; i <= 4; i++) {
-                    const y = padding + (height - 2 * padding) * (i / 4);
-                    ctx.beginPath();
-                    ctx.moveTo(padding, y);
-                    ctx.lineTo(width - padding, y);
-                    ctx.stroke();
-
-                    const val = (1.0 - i / 4).toFixed(2);
-                    ctx.fillStyle = theme === 'light' ? '#64748b' : '#a1aab5';
-                    ctx.font = '10px monospace';
-                    ctx.textAlign = 'right';
-                    ctx.fillText(val + "b", padding - 8, y + 3);
-                }
-
-                // Axis
-                ctx.strokeStyle = theme === 'light' ? '#cbd5e1' : '#3f3f4e';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(padding, height - padding);
-                ctx.lineTo(width - padding, height - padding);
-                ctx.stroke();
-
-                // Draw Entropy curve Hb(p)
-                const toX = (val) => padding + (width - 2 * padding) * val;
-                const toY = (val) => height - padding - (height - 2 * padding) * val;
-
-                ctx.strokeStyle = theme === 'light' ? '#00b377' : '#00e599';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                const steps = 200;
-                for (let i = 0; i <= steps; i++) {
-                    const sampleP = i / steps;
-                    const h = binaryEntropy(sampleP);
-                    const x = toX(sampleP);
-                    const y = toY(h);
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.stroke();
-
-                // Gradient fill under curve
-                ctx.lineTo(toX(1.0), toY(0.0));
-                ctx.lineTo(toX(0.0), toY(0.0));
-                ctx.closePath();
-                const grad = ctx.createLinearGradient(0, padding, 0, height - padding);
-                grad.addColorStop(0, theme === 'light' ? 'rgba(0, 179, 119, 0.25)' : 'rgba(0, 229, 153, 0.25)');
-                grad.addColorStop(1, 'rgba(0, 229, 153, 0.0)');
-                ctx.fillStyle = grad;
-                ctx.fill();
-
-                // Current point P
-                const currentH = binaryEntropy(p);
-                const px = toX(p);
-                const py = toY(currentH);
-
-                // Tangent slope dH/dp = log2((1-p)/p)
-                if (p > 0.01 && p < 0.99) {
-                    const slope = Math.log2((1 - p) / p);
-                    const dx = 40;
-                    const dy = -slope * (dx / (width - 2 * padding)) * (height - 2 * padding);
-                    ctx.strokeStyle = theme === 'light' ? '#f59e0b' : '#ffcc00';
-                    ctx.lineWidth = 1.5;
-                    ctx.setLineDash([4, 4]);
-                    ctx.beginPath();
-                    ctx.moveTo(px - dx, py - dy);
-                    ctx.lineTo(px + dx, py + dy);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                }
-
-                // Vertical projection line
-                ctx.strokeStyle = theme === 'light' ? '#94a3b8' : '#3f3f4e';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([2, 2]);
-                ctx.beginPath();
-                ctx.moveTo(px, height - padding);
-                ctx.lineTo(px, py);
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                // Glowing point marker
                 ctx.fillStyle = theme === 'light' ? '#00b377' : '#00e599';
-                ctx.shadowColor = theme === 'light' ? 'rgba(0, 179, 119, 0.8)' : 'rgba(0, 229, 153, 0.8)';
-                ctx.shadowBlur = 12;
-                ctx.beginPath();
-                ctx.arc(px, py, 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                // Labels
-                ctx.fillStyle = theme === 'light' ? '#0f172a' : '#e2e8f0';
-                ctx.font = 'bold 11px monospace';
+                ctx.font = '12px monospace';
                 ctx.textAlign = 'center';
-                ctx.fillText(`p = ${p.toFixed(3)}`, px, height - padding + 20);
-                ctx.fillText(`H(X) = ${currentH.toFixed(3)} bits`, px, py - 14);
-
-            }, [p, theme]);
-
-            const handleMouseDown = (e) => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const rect = canvas.getBoundingClientRect();
-                const padding = 40;
-                const x = e.clientX - rect.left;
-                const newP = Math.max(0.001, Math.min(0.999, (x - padding) / (rect.width - 2 * padding)));
-                onPChange(newP);
-            };
-
-            return (
-                <div className="relative w-full aspect-video bg-obsidian rounded-xl overflow-hidden border border-border shadow-lg">
-                    <canvas
-                        ref={canvasRef}
-                        className="w-full h-full cursor-ew-resize block"
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={(e) => e.buttons === 1 && handleMouseDown(e)}
-                    />
-                    <div className="absolute top-3 right-3 bg-surface80 backdrop-blur border border-border text-[10px] uppercase font-mono tracking-wider px-2.5 py-1 rounded text-textMuted select-none pointer-events-none">
-                        Interactive Convex Manifold
-                    </div>
-                </div>
-            );
-        };
-
-        // Tab 2 Visualizer: Real-Time Huffman Binary Tree Canvas
-        const HuffmanTreeCanvas = ({ tree, codes }) => {
-            const canvasRef = useRef(null);
-            const { theme } = useInfoStore();
-
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                const dpr = window.devicePixelRatio || 1;
-                const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width * dpr;
-                canvas.height = rect.height * dpr;
-                ctx.scale(dpr, dpr);
-
-                const width = rect.width;
-                const height = rect.height;
-
-                ctx.fillStyle = theme === 'light' ? '#ffffff' : '#0f0f13';
-                ctx.fillRect(0, 0, width, height);
-
-                if (!tree) {
-                    ctx.fillStyle = '#64748b';
-                    ctx.font = '12px monospace';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('Awaiting alphabet generation...', width / 2, height / 2);
-                    return;
-                }
-
-                // Assign layout coordinates (x, y) to each node recursively
-                function assignPositions(node, depth, leftBound, rightBound) {
-                    if (!node) return;
-                    node.y = 40 + depth * 55;
-                    node.x = (leftBound + rightBound) / 2;
-
-                    if (node.left && node.right) {
-                        assignPositions(node.left, depth + 1, leftBound, node.x);
-                        assignPositions(node.right, depth + 1, node.x, rightBound);
-                    } else if (node.left) {
-                        assignPositions(node.left, depth + 1, leftBound, rightBound);
-                    } else if (node.right) {
-                        assignPositions(node.right, depth + 1, leftBound, rightBound);
-                    }
-                }
-
-                assignPositions(tree, 0, 20, width - 20);
-
-                // Draw connecting edges
-                function drawEdges(node) {
-                    if (!node) return;
-                    if (node.left) {
-                        ctx.strokeStyle = theme === 'light' ? '#cbd5e1' : '#22222a';
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(node.x, node.y);
-                        ctx.lineTo(node.left.x, node.left.y);
-                        ctx.stroke();
-
-                        // Label edge '0'
-                        ctx.fillStyle = theme === 'light' ? '#00b377' : '#00e599';
-                        ctx.font = 'bold 11px monospace';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('0', (node.x + node.left.x) / 2 - 8, (node.y + node.left.y) / 2);
-
-                        drawEdges(node.left);
-                    }
-                    if (node.right) {
-                        ctx.strokeStyle = theme === 'light' ? '#cbd5e1' : '#22222a';
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        ctx.moveTo(node.x, node.y);
-                        ctx.lineTo(node.right.x, node.right.y);
-                        ctx.stroke();
-
-                        // Label edge '1'
-                        ctx.fillStyle = theme === 'light' ? '#f59e0b' : '#ffcc00';
-                        ctx.font = 'bold 11px monospace';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('1', (node.x + node.right.x) / 2 + 8, (node.y + node.right.y) / 2);
-
-                        drawEdges(node.right);
-                    }
-                }
-
-                drawEdges(tree);
-
-                // Draw nodes
-                function drawNodes(node) {
-                    if (!node) return;
-                    const isLeaf = node.isLeaf();
-                    const radius = isLeaf ? 16 : 12;
-
-                    ctx.beginPath();
-                    ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = isLeaf
-                        ? (theme === 'light' ? '#00b377' : '#00e599')
-                        : (theme === 'light' ? '#ffffff' : '#1a1a24');
-                    ctx.fill();
-                    ctx.strokeStyle = isLeaf ? '#ffffff' : (theme === 'light' ? '#94a3b8' : '#3f3f4e');
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-
-                    // Text
-                    ctx.font = 'bold 10px monospace';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    if (isLeaf) {
-                        ctx.fillStyle = '#000000';
-                        const displaySym = node.symbol === ' ' ? 'SPC' : node.symbol;
-                        ctx.fillText(displaySym, node.x, node.y);
-
-                        // Code badge underneath
-                        ctx.fillStyle = theme === 'light' ? '#0f172a' : '#e2e8f0';
-                        ctx.font = '9px monospace';
-                        ctx.fillText(codes[node.symbol] || '', node.x, node.y + radius + 12);
-                    } else {
-                        ctx.fillStyle = theme === 'light' ? '#64748b' : '#a1aab5';
-                        ctx.fillText(node.freq.toString(), node.x, node.y);
-                    }
-
-                    if (node.left) drawNodes(node.left);
-                    if (node.right) drawNodes(node.right);
-                }
-
-                drawNodes(tree);
-
-            }, [tree, codes, theme]);
+                ctx.fillText(`[ Interactive Canvas Mount · Parameter = ${value.toFixed(3)} ]`, rect.width / 2, rect.height / 2);
+            }, [value, theme]);
 
             return (
                 <div className="relative w-full aspect-video bg-obsidian rounded-xl overflow-hidden border border-border shadow-lg">
                     <canvas ref={canvasRef} className="w-full h-full block" />
                     <div className="absolute top-3 right-3 bg-surface80 backdrop-blur border border-border text-[10px] uppercase font-mono tracking-wider px-2.5 py-1 rounded text-textMuted select-none pointer-events-none">
-                        Prefix-Free Trie Topology
+                        Interactive Simulation
                     </div>
                 </div>
             );
         };
 
-        // Tab 3 Visualizer: Set-Theoretic Information Venn Diagram
-        const InformationVennCanvas = ({ jointP }) => {
-            const canvasRef = useRef(null);
-            const { theme } = useInfoStore();
-
-            const pX0 = jointP[0][0] + jointP[0][1];
-            const pX1 = jointP[1][0] + jointP[1][1];
-            const pY0 = jointP[0][0] + jointP[1][0];
-            const pY1 = jointP[0][1] + jointP[1][1];
-
-            const hX = discreteEntropy([pX0, pX1]);
-            const hY = discreteEntropy([pY0, pY1]);
-            const hXY = discreteEntropy(_.flatten(jointP));
-            const mutualI = Math.max(0, hX + hY - hXY);
-            const hXgivenY = Math.max(0, hX - mutualI);
-            const hYgivenX = Math.max(0, hY - mutualI);
-
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                const dpr = window.devicePixelRatio || 1;
-                const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width * dpr;
-                canvas.height = rect.height * dpr;
-                ctx.scale(dpr, dpr);
-
-                const width = rect.width;
-                const height = rect.height;
-
-                ctx.fillStyle = theme === 'light' ? '#ffffff' : '#0f0f13';
-                ctx.fillRect(0, 0, width, height);
-
-                const centerY = height / 2;
-                const baseRadius = 85;
-                const separation = Math.max(40, Math.min(130, 130 - mutualI * 70));
-
-                const leftCX = width / 2 - separation / 2;
-                const rightCX = width / 2 + separation / 2;
-
-                // Circle 1: H(X)
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(leftCX, centerY, baseRadius, 0, Math.PI * 2);
-                ctx.fillStyle = theme === 'light' ? 'rgba(0, 179, 119, 0.15)' : 'rgba(0, 229, 153, 0.12)';
-                ctx.fill();
-                ctx.strokeStyle = theme === 'light' ? '#00b377' : '#00e599';
-                ctx.lineWidth = 2.5;
-                ctx.stroke();
-                ctx.restore();
-
-                // Circle 2: H(Y)
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(rightCX, centerY, baseRadius, 0, Math.PI * 2);
-                ctx.fillStyle = theme === 'light' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(96, 165, 250, 0.12)';
-                ctx.fill();
-                ctx.strokeStyle = '#3b82f6';
-                ctx.lineWidth = 2.5;
-                ctx.stroke();
-                ctx.restore();
-
-                // Overlap highlight: I(X; Y)
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(leftCX, centerY, baseRadius, 0, Math.PI * 2);
-                ctx.clip();
-                ctx.beginPath();
-                ctx.arc(rightCX, centerY, baseRadius, 0, Math.PI * 2);
-                ctx.fillStyle = theme === 'light' ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 204, 0, 0.25)';
-                ctx.fill();
-                ctx.restore();
-
-                // Text labels
-                ctx.font = 'bold 12px monospace';
-                ctx.textAlign = 'center';
-
-                // H(X|Y)
-                ctx.fillStyle = theme === 'light' ? '#00b377' : '#00e599';
-                ctx.fillText(`H(X|Y)`, leftCX - 35, centerY - 6);
-                ctx.font = '11px monospace';
-                ctx.fillText(`${hXgivenY.toFixed(2)} b`, leftCX - 35, centerY + 14);
-
-                // I(X; Y)
-                ctx.font = 'bold 12px monospace';
-                ctx.fillStyle = theme === 'light' ? '#f59e0b' : '#ffcc00';
-                ctx.fillText(`I(X; Y)`, width / 2, centerY - 6);
-                ctx.font = '11px monospace';
-                ctx.fillText(`${mutualI.toFixed(2)} b`, width / 2, centerY + 14);
-
-                // H(Y|X)
-                ctx.font = 'bold 12px monospace';
-                ctx.fillStyle = '#3b82f6';
-                ctx.fillText(`H(Y|X)`, rightCX + 35, centerY - 6);
-                ctx.font = '11px monospace';
-                ctx.fillText(`${hYgivenX.toFixed(2)} b`, rightCX + 35, centerY + 14);
-
-                // Top Header titles
-                ctx.font = '11px monospace';
-                ctx.fillStyle = theme === 'light' ? '#64748b' : '#a1aab5';
-                ctx.fillText(`Total H(X) = ${hX.toFixed(2)} b`, leftCX, centerY - baseRadius - 12);
-                ctx.fillText(`Total H(Y) = ${hY.toFixed(2)} b`, rightCX, centerY - baseRadius - 12);
-                ctx.fillText(`Joint H(X,Y) = ${hXY.toFixed(2)} b`, width / 2, height - 16);
-
-            }, [jointP, theme, hX, hY, hXY, mutualI, hXgivenY, hYgivenX]);
-
-            return (
-                <div className="relative w-full aspect-video bg-obsidian rounded-xl overflow-hidden border border-border shadow-lg">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
-                    <div className="absolute top-3 right-3 bg-surface80 backdrop-blur border border-border text-[10px] uppercase font-mono tracking-wider px-2.5 py-1 rounded text-textMuted select-none pointer-events-none">
-                        Algebraic Information Overlap
-                    </div>
-                </div>
-            );
-        };
-
-        // Tab 4 Visualizer: Binary Symmetric Channel & AWGN Constellation Canvas
-        const ChannelSimulationCanvas = ({ noise, snrDb }) => {
-            const canvasRef = useRef(null);
-            const { theme } = useInfoStore();
-
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                const dpr = window.devicePixelRatio || 1;
-                const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width * dpr;
-                canvas.height = rect.height * dpr;
-                ctx.scale(dpr, dpr);
-
-                const width = rect.width;
-                const height = rect.height;
-
-                ctx.fillStyle = theme === 'light' ? '#ffffff' : '#0f0f13';
-                ctx.fillRect(0, 0, width, height);
-
-                // Left: BSC Lattice diagram
-                const leftBoxW = width * 0.48;
-                const rightBoxX = width * 0.52;
-                const rightBoxW = width * 0.48;
-
-                // Draw BSC Diagram
-                ctx.fillStyle = theme === 'light' ? '#64748b' : '#a1aab5';
-                ctx.font = '11px monospace';
-                ctx.textAlign = 'left';
-                ctx.fillText("Binary Symmetric Channel (BSC)", 20, 24);
-
-                const xIn = 40;
-                const xOut = leftBoxW - 40;
-                const y0 = 65;
-                const y1 = 155;
-
-                // Inputs
-                ctx.fillStyle = theme === 'light' ? '#0f172a' : '#e2e8f0';
-                ctx.font = 'bold 12px monospace';
-                ctx.fillText("X=0", xIn - 26, y0 + 4);
-                ctx.fillText("X=1", xIn - 26, y1 + 4);
-
-                // Outputs
-                ctx.fillText("Y=0", xOut + 10, y0 + 4);
-                ctx.fillText("Y=1", xOut + 10, y1 + 4);
-
-                // Forward paths (1-p)
-                ctx.strokeStyle = theme === 'light' ? '#00b377' : '#00e599';
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.moveTo(xIn, y0); ctx.lineTo(xOut, y0);
-                ctx.moveTo(xIn, y1); ctx.lineTo(xOut, y1);
-                ctx.stroke();
-
-                // Cross flip paths (p)
-                ctx.strokeStyle = theme === 'light' ? '#ef4444' : '#ff3366';
-                ctx.lineWidth = Math.max(1, noise * 6);
-                ctx.beginPath();
-                ctx.moveTo(xIn, y0); ctx.lineTo(xOut, y1);
-                ctx.moveTo(xIn, y1); ctx.lineTo(xOut, y0);
-                ctx.stroke();
-
-                // Labels
-                ctx.font = '10px monospace';
-                ctx.fillStyle = theme === 'light' ? '#00b377' : '#00e599';
-                ctx.fillText(`1 - p = ${(1 - noise).toFixed(3)}`, (xIn + xOut) / 2, y0 - 8);
-                ctx.fillText(`1 - p = ${(1 - noise).toFixed(3)}`, (xIn + xOut) / 2, y1 + 16);
-
-                ctx.fillStyle = theme === 'light' ? '#ef4444' : '#ff3366';
-                ctx.fillText(`p = ${noise.toFixed(3)}`, (xIn + xOut) / 2, (y0 + y1) / 2);
-
-                // Right: AWGN 2D Constellation Simulation (QPSK)
-                ctx.fillStyle = theme === 'light' ? '#64748b' : '#a1aab5';
-                ctx.font = '11px monospace';
-                ctx.fillText(`AWGN Constellation (SNR = ${snrDb.toFixed(1)} dB)`, rightBoxX, 24);
-
-                const constCX = rightBoxX + rightBoxW / 2 - 10;
-                const constCY = 110;
-                const constR = 50;
-
-                // Axes
-                ctx.strokeStyle = theme === 'light' ? '#cbd5e1' : '#22222a';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(constCX - constR - 20, constCY);
-                ctx.lineTo(constCX + constR + 20, constCY);
-                ctx.moveTo(constCX, constCY - constR - 20);
-                ctx.lineTo(constCX, constCY + constR + 20);
-                ctx.stroke();
-
-                // Convert SNR dB to noise variance sigma
-                const snrLinear = Math.pow(10, snrDb / 10);
-                const noiseStd = constR / Math.sqrt(2 * Math.max(0.1, snrLinear));
-
-                // Constellation symbols (QPSK: 4 points)
-                const symbols = [
-                    { x: constCX + constR * 0.7, y: constCY - constR * 0.7 },
-                    { x: constCX - constR * 0.7, y: constCY - constR * 0.7 },
-                    { x: constCX - constR * 0.7, y: constCY + constR * 0.7 },
-                    { x: constCX + constR * 0.7, y: constCY + constR * 0.7 }
-                ];
-
-                // Draw noisy received clouds
-                ctx.fillStyle = theme === 'light' ? 'rgba(0, 179, 119, 0.4)' : 'rgba(0, 229, 153, 0.4)';
-                for (let s of symbols) {
-                    for (let i = 0; i < 20; i++) {
-                        // Box-Muller normal random
-                        const u1 = Math.random();
-                        const u2 = Math.random();
-                        const z0 = Math.sqrt(-2.0 * Math.log(u1 || 1e-6)) * Math.cos(2.0 * Math.PI * u2);
-                        const z1 = Math.sqrt(-2.0 * Math.log(u1 || 1e-6)) * Math.sin(2.0 * Math.PI * u2);
-                        ctx.beginPath();
-                        ctx.arc(s.x + z0 * noiseStd, s.y + z1 * noiseStd, 1.8, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-
-                // Clean centers
-                ctx.fillStyle = '#ffffff';
-                for (let s of symbols) {
-                    ctx.beginPath();
-                    ctx.arc(s.x, s.y, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = '#3b82f6';
-                    ctx.lineWidth = 1.5;
-                    ctx.stroke();
-                }
-
-            }, [noise, snrDb, theme]);
-
-            return (
-                <div className="relative w-full aspect-video bg-obsidian rounded-xl overflow-hidden border border-border shadow-lg">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
-                    <div className="absolute top-3 right-3 bg-surface80 backdrop-blur border border-border text-[10px] uppercase font-mono tracking-wider px-2.5 py-1 rounded text-textMuted select-none pointer-events-none">
-                        Physical Noise Channels
-                    </div>
-                </div>
-            );
-        };
-
-        // Tab 5 Visualizer: Probability Simplex and Continuous KL Divergence
-        const DivergenceCanvas = ({ gaussP, gaussQ }) => {
-            const canvasRef = useRef(null);
-            const { theme } = useInfoStore();
-
-            // Exact analytical 1D Gaussian KL divergence:
-            // D_KL(P || Q) = log(sigma2/sigma1) + (sigma1^2 + (mu1 - mu2)^2)/(2*sigma2^2) - 0.5
-            const klDivergence = useMemo(() => {
-                const s1 = gaussP.sigma;
-                const s2 = gaussQ.sigma;
-                const m1 = gaussP.mu;
-                const m2 = gaussQ.mu;
-                const ratio = Math.log(s2 / s1);
-                const quad = (s1 * s1 + Math.pow(m1 - m2, 2)) / (2 * s2 * s2);
-                return (ratio + quad - 0.5) / Math.LN2; // bits
-            }, [gaussP, gaussQ]);
-
-            useEffect(() => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                const dpr = window.devicePixelRatio || 1;
-                const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width * dpr;
-                canvas.height = rect.height * dpr;
-                ctx.scale(dpr, dpr);
-
-                const width = rect.width;
-                const height = rect.height;
-                const padding = 40;
-
-                ctx.fillStyle = theme === 'light' ? '#ffffff' : '#0f0f13';
-                ctx.fillRect(0, 0, width, height);
-
-                // Grid
-                ctx.strokeStyle = theme === 'light' ? '#e2e8f0' : '#22222a';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(padding, height - padding);
-                ctx.lineTo(width - padding, height - padding);
-                ctx.stroke();
-
-                // Mapping functions for x in [-4, 6]
-                const xMin = -4.0, xMax = 6.0;
-                const toX = (val) => padding + ((val - xMin) / (xMax - xMin)) * (width - 2 * padding);
-                const toY = (val) => height - padding - val * (height - 2 * padding) * 1.8;
-
-                function gaussianPdf(x, mu, sigma) {
-                    return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
-                }
-
-                // Draw Distribution P (Accent)
-                ctx.strokeStyle = theme === 'light' ? '#00b377' : '#00e599';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                for (let i = 0; i <= 200; i++) {
-                    const xVal = xMin + (i / 200) * (xMax - xMin);
-                    const yVal = gaussianPdf(xVal, gaussP.mu, gaussP.sigma);
-                    const px = toX(xVal);
-                    const py = toY(yVal);
-                    if (i === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                }
-                ctx.stroke();
-
-                // Fill P
-                ctx.lineTo(toX(xMax), toY(0));
-                ctx.lineTo(toX(xMin), toY(0));
-                ctx.closePath();
-                ctx.fillStyle = theme === 'light' ? 'rgba(0, 179, 119, 0.15)' : 'rgba(0, 229, 153, 0.15)';
-                ctx.fill();
-
-                // Draw Distribution Q (Purple/Blue)
-                ctx.strokeStyle = '#a855f7';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                for (let i = 0; i <= 200; i++) {
-                    const xVal = xMin + (i / 200) * (xMax - xMin);
-                    const yVal = gaussianPdf(xVal, gaussQ.mu, gaussQ.sigma);
-                    const px = toX(xVal);
-                    const py = toY(yVal);
-                    if (i === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                }
-                ctx.stroke();
-
-                // Fill Q
-                ctx.lineTo(toX(xMax), toY(0));
-                ctx.lineTo(toX(xMin), toY(0));
-                ctx.closePath();
-                ctx.fillStyle = 'rgba(168, 85, 247, 0.12)';
-                ctx.fill();
-
-                // Labels
-                ctx.font = 'bold 11px monospace';
-                ctx.fillStyle = theme === 'light' ? '#00b377' : '#00e599';
-                ctx.fillText(`Target P: N(${gaussP.mu.toFixed(1)}, ${gaussP.sigma.toFixed(1)}²)`, padding + 10, 30);
-
-                ctx.fillStyle = '#a855f7';
-                ctx.fillText(`Model Q: N(${gaussQ.mu.toFixed(1)}, ${gaussQ.sigma.toFixed(1)}²)`, padding + 10, 50);
-
-                // Badge display for KL
-                ctx.fillStyle = theme === 'light' ? '#f59e0b' : '#ffcc00';
-                ctx.font = 'bold 13px monospace';
-                ctx.textAlign = 'right';
-                ctx.fillText(`D_KL(P || Q) = ${klDivergence.toFixed(4)} bits`, width - padding, 35);
-
-            }, [gaussP, gaussQ, theme, klDivergence]);
-
-            return (
-                <div className="relative w-full aspect-video bg-obsidian rounded-xl overflow-hidden border border-border shadow-lg">
-                    <canvas ref={canvasRef} className="w-full h-full block" />
-                    <div className="absolute top-3 right-3 bg-surface80 backdrop-blur border border-border text-[10px] uppercase font-mono tracking-wider px-2.5 py-1 rounded text-textMuted select-none pointer-events-none">
-                        Continuous Relative Entropy
-                    </div>
-                </div>
-            );
-        };
-
-        /* ==================== TAB DASHBOARDS ==================== */
-
-        // Tab 1: Entropy & Surprise Explorer
-        const EntropyDashboard = () => {
-            const store = useInfoStore();
-            const surprise0 = -Math.log2(Math.max(1e-6, store.binaryP));
-            const surprise1 = -Math.log2(Math.max(1e-6, 1 - store.binaryP));
-            const currentHb = binaryEntropy(store.binaryP);
-
+        const WorkbenchDashboardPlaceholder = () => {
+            const store = useWorkbenchStore();
             return (
                 <div className="space-y-6">
                     <div className="bg-panel rounded-xl border border-border p-5 space-y-5 shadow-sm">
                         <div className="flex justify-between items-center border-b border-border/50 pb-3">
                             <h4 className="text-sm font-semibold flex items-center gap-2 text-textMain">
-                                <Lucide.Activity size={16} className="text-accent" /> Binary Source Uncertainty
+                                <Lucide.Activity size={16} className="text-accent" /> Simulation Controls
                             </h4>
                             <span className="text-[9px] font-mono uppercase bg-accent10 text-accent px-2 py-0.5 rounded border border-accent20 tracking-wider">
-                                Axiomatic Foundation
+                                Live Parameters
                             </span>
                         </div>
-
-                        <div className="space-y-5">
-                            <GlassSlider
-                                label="Probability of Heads P(X = 0)"
-                                symbol="p"
-                                min={0.001}
-                                max={0.999}
-                                step={0.001}
-                                value={store.binaryP}
-                                onChange={store.setBinaryP}
-                            />
-
-                            <div className="grid grid-cols-3 gap-3 text-xs font-mono">
-                                <div className="p-3 rounded-lg bg-surface border border-border shadow-sm flex flex-col justify-between">
-                                    <span className="text-textMuted text-[10px] uppercase mb-1">Surprise I(0)</span>
-                                    <span className="text-accent font-bold text-sm">{surprise0.toFixed(3)} bits</span>
-                                </div>
-                                <div className="p-3 rounded-lg bg-surface border border-border shadow-sm flex flex-col justify-between">
-                                    <span className="text-textMuted text-[10px] uppercase mb-1">Surprise I(1)</span>
-                                    <span className="text-warning font-bold text-sm">{surprise1.toFixed(3)} bits</span>
-                                </div>
-                                <div className="p-3 rounded-lg bg-surface border border-border shadow-sm flex flex-col justify-between">
-                                    <span className="text-textMuted text-[10px] uppercase mb-1">Entropy H_b(p)</span>
-                                    <span className="text-textMain font-bold text-sm">{currentHb.toFixed(3)} bits</span>
-                                </div>
+                        <GlassSlider
+                            label="Primary Parameter"
+                            symbol="θ"
+                            min={0}
+                            max={1}
+                            step={0.001}
+                            value={store.paramValue}
+                            onChange={store.setParamValue}
+                        />
+                        <div className="grid grid-cols-3 gap-3 text-xs font-mono">
+                            <div className="p-3 rounded-lg bg-surface border border-border shadow-sm flex flex-col justify-between">
+                                <span className="text-textMuted text-[10px] uppercase mb-1">Metric A</span>
+                                <span className="text-accent font-bold text-sm">{store.paramValue.toFixed(3)}</span>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-panel rounded-xl border border-border p-5 space-y-4 shadow-sm">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-textMain border-b border-border/50 pb-3">
-                            <Lucide.Sliders size={16} className="text-accent" /> 4-Ary Categorical Source Distribution
-                        </h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            {store.categoricalProbs.map((p, idx) => (
-                                <div key={idx} className="space-y-2">
-                                    <GlassSlider
-                                        label={`Sym ${store.symbolAlphabet[idx]}`}
-                                        min={0.01}
-                                        max={0.97}
-                                        step={0.01}
-                                        value={p}
-                                        onChange={(val) => store.setCategoricalProb(idx, val)}
-                                        formatDigits={2}
-                                    />
-                                    <div className="text-[10px] font-mono text-textMuted flex justify-between">
-                                        <span>I({store.symbolAlphabet[idx]}):</span>
-                                        <span className="font-bold text-textMain">{(-Math.log2(p)).toFixed(2)}b</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="pt-3 border-t border-border/50 flex justify-between items-center text-xs font-mono">
-                            <span className="text-textMuted">Categorical Entropy:</span>
-                            <span className="text-accent font-bold text-sm">
-                                {discreteEntropy(store.categoricalProbs).toFixed(4)} bits / symbol
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // Tab 2: Huffman & Source Coding
-        const HuffmanDashboard = () => {
-            const store = useInfoStore();
-            useEffect(() => { store.recomputeHuffman(); }, []);
-
-            return (
-                <div className="space-y-6">
-                    <div className="bg-panel rounded-xl border border-border p-5 space-y-4 shadow-sm">
-                        <div className="flex justify-between items-center border-b border-border/50 pb-3">
-                            <h4 className="text-sm font-semibold flex items-center gap-2 text-textMain">
-                                <Lucide.FileCode size={16} className="text-accent" /> Lossless Source Compression Buffer
-                            </h4>
-                            <span className="text-[10px] font-mono text-accent bg-accent10 px-2 py-0.5 rounded border border-accent20">
-                                Shannon Limit = {store.compressionStats.entropyBits.toFixed(1)} bits
-                            </span>
-                        </div>
-
-                        <div>
-                            <label className="text-[10px] uppercase tracking-wider text-textMuted font-mono block mb-1.5">
-                                Input Message to Compress
-                            </label>
-                            <input
-                                type="text"
-                                value={store.sampleText}
-                                onChange={(e) => store.setSampleText(e.target.value)}
-                                className="w-full bg-surface border border-border rounded-lg p-2.5 text-sm text-textMain font-mono focus:outline-none focus:border-accent"
-                                placeholder="Type any text to construct tree..."
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Raw ASCII</span>
-                                <span className="font-bold text-textMain">{store.compressionStats.rawBits} bits</span>
+                            <div className="p-3 rounded-lg bg-surface border border-border shadow-sm flex flex-col justify-between">
+                                <span className="text-textMuted text-[10px] uppercase mb-1">Metric B</span>
+                                <span className="text-warning font-bold text-sm">0.000</span>
                             </div>
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Huffman Bits</span>
-                                <span className="font-bold text-accent">{store.compressionStats.huffmanBits} bits</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Theoretical Limit</span>
-                                <span className="font-bold text-warning">{store.compressionStats.entropyBits.toFixed(1)} bits</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Space Saved</span>
-                                <span className="font-bold text-accent">{store.compressionStats.ratio.toFixed(1)}%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-panel rounded-xl border border-border p-5 shadow-sm space-y-3">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-textMain">
-                            <Lucide.Binary size={16} className="text-accent" /> Prefix-Free Symbol Dictionary
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                            {Object.entries(store.huffmanCodes).map(([sym, code]) => (
-                                <div key={sym} className="px-3 py-1.5 rounded bg-surface border border-border text-xs font-mono flex items-center gap-2">
-                                    <span className="font-bold text-accent">{sym === ' ' ? 'SPC' : sym}</span>
-                                    <span className="text-textMuted">&rarr;</span>
-                                    <span className="text-textMain font-semibold tracking-wider">{code}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // Tab 3: Mutual Information & Joint Topography
-        const MutualDashboard = () => {
-            const store = useInfoStore();
-            const { jointP } = store;
-
-            const pX0 = jointP[0][0] + jointP[0][1];
-            const pX1 = jointP[1][0] + jointP[1][1];
-            const pY0 = jointP[0][0] + jointP[1][0];
-            const pY1 = jointP[0][1] + jointP[1][1];
-
-            const hX = discreteEntropy([pX0, pX1]);
-            const hY = discreteEntropy([pY0, pY1]);
-            const hXY = discreteEntropy(_.flatten(jointP));
-            const mutualI = Math.max(0, hX + hY - hXY);
-
-            return (
-                <div className="space-y-6">
-                    <div className="bg-panel rounded-xl border border-border p-5 space-y-5 shadow-sm">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-textMain border-b border-border/50 pb-3">
-                            <Lucide.Grid size={16} className="text-accent" /> Joint Distribution Matrix P(X, Y)
-                        </h4>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
-                                <span className="text-[10px] font-mono text-textMuted uppercase">P(X=0, Y=0)</span>
-                                <GlassSlider
-                                    label=""
-                                    min={0.01} max={0.8} step={0.01}
-                                    value={jointP[0][0]}
-                                    onChange={(v) => store.setJointCell(0, 0, v)}
-                                    formatDigits={2}
-                                />
-                            </div>
-                            <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
-                                <span className="text-[10px] font-mono text-textMuted uppercase">P(X=0, Y=1)</span>
-                                <GlassSlider
-                                    label=""
-                                    min={0.01} max={0.8} step={0.01}
-                                    value={jointP[0][1]}
-                                    onChange={(v) => store.setJointCell(0, 1, v)}
-                                    formatDigits={2}
-                                />
-                            </div>
-                            <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
-                                <span className="text-[10px] font-mono text-textMuted uppercase">P(X=1, Y=0)</span>
-                                <GlassSlider
-                                    label=""
-                                    min={0.01} max={0.8} step={0.01}
-                                    value={jointP[1][0]}
-                                    onChange={(v) => store.setJointCell(1, 0, v)}
-                                    formatDigits={2}
-                                />
-                            </div>
-                            <div className="p-3 rounded-xl bg-surface border border-border space-y-2">
-                                <span className="text-[10px] font-mono text-textMuted uppercase">P(X=1, Y=1)</span>
-                                <GlassSlider
-                                    label=""
-                                    min={0.01} max={0.8} step={0.01}
-                                    value={jointP[1][1]}
-                                    onChange={(v) => store.setJointCell(1, 1, v)}
-                                    formatDigits={2}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-3 text-xs font-mono pt-2">
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Marginal H(X)</span>
-                                <span className="font-bold text-accent">{hX.toFixed(3)} bits</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Marginal H(Y)</span>
-                                <span className="font-bold text-blue-400">{hY.toFixed(3)} bits</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Mutual I(X;Y)</span>
-                                <span className="font-bold text-warning">{mutualI.toFixed(3)} bits</span>
+                            <div className="p-3 rounded-lg bg-surface border border-border shadow-sm flex flex-col justify-between">
+                                <span className="text-textMuted text-[10px] uppercase mb-1">Metric C</span>
+                                <span className="text-textMain font-bold text-sm">0.000</span>
                             </div>
                         </div>
                     </div>
                 </div>
             );
         };
-
-        // Tab 4: Channel Capacity & Hamming Simulator
-        const ChannelDashboard = () => {
-            const store = useInfoStore();
-            const bscCapacity = 1.0 - binaryEntropy(store.channelNoise);
-
-            // Shannon-Hartley theorem: C = B * log2(1 + SNR)
-            const snrLinear = Math.pow(10, store.snrDb / 10);
-            const continuousCapacity = store.bandwidth * Math.log2(1 + snrLinear);
-
-            return (
-                <div className="space-y-6">
-                    <div className="bg-panel rounded-xl border border-border p-5 space-y-5 shadow-sm">
-                        <div className="flex justify-between items-center border-b border-border/50 pb-3">
-                            <h4 className="text-sm font-semibold flex items-center gap-2 text-textMain">
-                                <Lucide.Cpu size={16} className="text-accent" /> Physical Channel Parameters
-                            </h4>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={store.transmitPacket}
-                                    className="px-3 py-1.5 rounded-lg bg-accent text-obsidian text-xs font-mono font-bold hover:bg-opacity-90 flex items-center gap-1.5 transition-all"
-                                >
-                                    <Lucide.Send size={14} /> Transmit Block
-                                </button>
-                                <button
-                                    onClick={store.resetChannelStats}
-                                    className="p-1.5 rounded-lg bg-surface border border-border text-textMuted hover:text-textMain"
-                                    title="Reset statistics"
-                                >
-                                    <Lucide.RotateCcw size={14} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            <GlassSlider
-                                label="BSC Bit Inversion Error Rate"
-                                symbol="p"
-                                min={0.0}
-                                max={0.5}
-                                step={0.01}
-                                value={store.channelNoise}
-                                onChange={store.setChannelNoise}
-                            />
-                            <GlassSlider
-                                label="AWGN Signal-to-Noise Ratio"
-                                symbol="SNR (dB)"
-                                min={-5}
-                                max={35}
-                                step={0.5}
-                                value={store.snrDb}
-                                onChange={store.setSnrDb}
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">BSC Capacity</span>
-                                <span className="font-bold text-accent">{bscCapacity.toFixed(3)} bits/use</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Continuous Cap</span>
-                                <span className="font-bold text-accent">{continuousCapacity.toFixed(1)} kbps</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Total Blocks</span>
-                                <span className="font-bold text-textMain">{store.totalPacketsSent}</span>
-                            </div>
-                            <div className="p-3 rounded-lg bg-surface border border-border">
-                                <span className="text-[10px] text-textMuted uppercase block mb-1">Hamming Healed</span>
-                                <span className="font-bold text-warning">{store.totalPacketsCorrected}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Real-time Block Buffer */}
-                    <div className="bg-panel rounded-xl border border-border p-5 shadow-sm space-y-3">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-textMain">
-                            <Lucide.ShieldCheck size={16} className="text-accent" /> Hamming (7,4) Transmission Log
-                        </h4>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs font-mono text-left">
-                                <thead>
-                                    <tr className="border-b border-border text-textMuted">
-                                        <th className="py-2">Raw (4b)</th>
-                                        <th className="py-2">Coded (7b)</th>
-                                        <th className="py-2">Received (7b)</th>
-                                        <th className="py-2">Syndrome</th>
-                                        <th className="py-2">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {store.channelPackets.slice(0, 5).map((pkt) => (
-                                        <tr key={pkt.id} className="border-b border-border30 hover:bg-surface50">
-                                            <td className="py-2 text-textMain font-bold">[{pkt.data.join('')}]</td>
-                                            <td className="py-2 text-textMuted">{pkt.encoded.join('')}</td>
-                                            <td className="py-2">
-                                                {pkt.received.map((bit, idx) => (
-                                                    <span key={idx} className={pkt.flippedBits[idx] ? "text-danger font-bold bg-danger10 px-0.5 rounded" : "text-textMain"}>
-                                                        {bit}
-                                                    </span>
-                                                ))}
-                                            </td>
-                                            <td className="py-2 text-warning">S={pkt.decodeResult.syndrome}</td>
-                                            <td className="py-2">
-                                                {pkt.isSuccess ? (
-                                                    <span className="text-accent flex items-center gap-1"><Lucide.CheckCircle2 size={12} /> OK</span>
-                                                ) : (
-                                                    <span className="text-danger flex items-center gap-1"><Lucide.XCircle size={12} /> FAILED</span>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {store.channelPackets.length === 0 && (
-                                        <tr>
-                                            <td colSpan="5" className="py-4 text-center text-textMuted">No blocks sent yet. Click 'Transmit Block' above.</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // Tab 5: Divergence & Continuous Geometry
-        const DivergenceDashboard = () => {
-            const store = useInfoStore();
-            const { gaussP, gaussQ } = store;
-
-            return (
-                <div className="space-y-6">
-                    <div className="bg-panel rounded-xl border border-border p-5 space-y-5 shadow-sm">
-                        <h4 className="text-sm font-semibold flex items-center gap-2 text-textMain border-b border-border/50 pb-3">
-                            <Lucide.SlidersHorizontal size={16} className="text-accent" /> Continuous Gaussian Parameter Controls
-                        </h4>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div className="p-4 rounded-xl bg-surface border border-accent20 space-y-4">
-                                <span className="text-xs font-mono font-bold text-accent uppercase block">Target Distribution P</span>
-                                <GlassSlider
-                                    label="Mean (μ₁)"
-                                    min={-3.0} max={3.0} step={0.1}
-                                    value={gaussP.mu}
-                                    onChange={(v) => store.setGaussP({ mu: v })}
-                                    formatDigits={1}
-                                />
-                                <GlassSlider
-                                    label="Std Dev (σ₁)"
-                                    min={0.5} max={3.0} step={0.1}
-                                    value={gaussP.sigma}
-                                    onChange={(v) => store.setGaussP({ sigma: v })}
-                                    formatDigits={1}
-                                />
-                            </div>
-
-                            <div className="p-4 rounded-xl bg-surface border border-purple-500/20 space-y-4">
-                                <span className="text-xs font-mono font-bold text-purple-400 uppercase block">Model Distribution Q</span>
-                                <GlassSlider
-                                    label="Mean (μ₂)"
-                                    min={-3.0} max={3.0} step={0.1}
-                                    value={gaussQ.mu}
-                                    onChange={(v) => store.setGaussQ({ mu: v })}
-                                    formatDigits={1}
-                                />
-                                <GlassSlider
-                                    label="Std Dev (σ₂)"
-                                    min={0.5} max={3.0} step={0.1}
-                                    value={gaussQ.sigma}
-                                    onChange={(v) => store.setGaussQ({ sigma: v })}
-                                    formatDigits={1}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="p-4 rounded-xl bg-surface border border-border flex justify-between items-center">
-                            <span className="text-xs font-mono text-textMuted uppercase">Gibbs Non-Negativity Invariant</span>
-                            <span className="text-xs font-mono text-accent font-bold">D_KL(P || Q) &ge; 0 always satisfied</span>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        /* ==================== ARTICLE READER WRAPPER ==================== */
 
         const ArticleReader = () => {
-            const store = useInfoStore();
+            const store = useWorkbenchStore();
             const { activeSection, fontSizeMultiplier } = store;
 
             useEffect(() => {
@@ -1928,7 +481,7 @@
                     <div className="w-80 flex-shrink-0 border-r border-border bg-obsidian/95 hidden xl:flex flex-col relative z-20">
                         <div className="flex-1 overflow-y-auto no-scrollbar p-8 pb-24">
                             <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-textMuted mb-8 flex items-center gap-3">
-                                <Lucide.Network size={14} className="text-accent" /> Mathematical Canon
+                                <Lucide.Network size={14} className="text-accent" /> Concept Index
                             </h2>
                             <nav className="space-y-1.5 relative before:absolute before:inset-y-0 before:left-[7px] before:w-px before:bg-border50">
                                 {YAP_CONTENT.map((sec) => {
@@ -1980,10 +533,10 @@
                         <div className="px-6 py-12 md:px-12 lg:px-16 lg:py-20 max-w-4xl mx-auto" style={{ fontSize: `${fontSizeMultiplier}rem` }}>
                             <header className="mb-16 border-b border-border50 pb-10">
                                 <h1 className="text-[2.25em] md:text-[3.25em] font-bold tracking-tight text-textMain mb-6 leading-[1.1]">
-                                    Mathematical Foundations of Information Theory
+                                    Lesson Title Placeholder
                                 </h1>
                                 <p className="text-textMuted font-mono text-sm tracking-wide">
-                                    From Shannon Self-Information to Gaussian Channel Capacity
+                                    Subtitle & Core Domain Overview
                                 </p>
                             </header>
 
@@ -2019,7 +572,7 @@
                                 <div className="inline-flex items-center justify-center p-4 rounded-full bg-surface border border-border mb-6">
                                     <Lucide.Radio size={20} className="text-accent" />
                                 </div>
-                                <p className="text-xs font-mono text-textMuted">End of Information Theory Axioms</p>
+                                <p className="text-xs font-mono text-textMuted">End of Lesson</p>
                             </footer>
                         </div>
                     </div>
@@ -2027,16 +580,14 @@
             );
         };
 
-        /* ==================== MAIN WORKBENCH SHELL ==================== */
-
         const MainApp = () => {
-            const store = useInfoStore();
+            const store = useWorkbenchStore();
 
             return (
                 <ErrorBoundary>
                     <div className="flex h-screen w-screen bg-obsidian text-textMain overflow-hidden font-sans selection:bg-accent30 selection:text-textMain relative">
 
-                        {/* Left Pane: Structured Theory Article */}
+                        {/* Left Pane: Structured Article */}
                         <div className={cn(
                             "h-full lg:w-[50%] xl:w-[55%] border-r border-border relative z-20 bg-obsidian drop-shadow-2xl transition-all duration-300",
                             store.mobileView === 'protocol' ? 'block w-full' : 'hidden lg:block'
@@ -2051,75 +602,34 @@
                         )}>
                             <div className="flex-1 flex flex-col p-5 sm:p-8 max-w-4xl mx-auto w-full min-h-max pb-32 lg:pb-16">
 
-                                {/* Navigation Workbench Tabs */}
                                 <div className="border-b border-border/50 pb-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                     <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs font-mono w-full sm:w-auto">
                                         <button
-                                            onClick={() => store.setActiveTab(VIS_TABS.ENTROPY)}
+                                            onClick={() => store.setActiveTab(VIS_TABS.TAB_1)}
                                             className={cn(
                                                 "px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-1.5 border font-medium",
-                                                store.activeTab === VIS_TABS.ENTROPY ? "bg-surface text-accent border-accent30 shadow-sm" : "bg-transparent text-textMuted border-transparent hover:text-textMain hover:border-border30"
+                                                store.activeTab === VIS_TABS.TAB_1 ? "bg-surface text-accent border-accent30 shadow-sm" : "bg-transparent text-textMuted border-transparent hover:text-textMain hover:border-border30"
                                             )}
                                         >
-                                            <Lucide.Activity size={14} /><span className="hidden sm:inline">1. Entropy</span>
+                                            <Lucide.Activity size={14} /><span>1. Primary View</span>
                                         </button>
                                         <button
-                                            onClick={() => store.setActiveTab(VIS_TABS.HUFFMAN)}
+                                            onClick={() => store.setActiveTab(VIS_TABS.TAB_2)}
                                             className={cn(
                                                 "px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-1.5 border font-medium",
-                                                store.activeTab === VIS_TABS.HUFFMAN ? "bg-surface text-accent border-accent30 shadow-sm" : "bg-transparent text-textMuted border-transparent hover:text-textMain hover:border-border30"
+                                                store.activeTab === VIS_TABS.TAB_2 ? "bg-surface text-accent border-accent30 shadow-sm" : "bg-transparent text-textMuted border-transparent hover:text-textMain hover:border-border30"
                                             )}
                                         >
-                                            <Lucide.FileCode size={14} /><span className="hidden sm:inline">2. Huffman</span>
-                                        </button>
-                                        <button
-                                            onClick={() => store.setActiveTab(VIS_TABS.MUTUAL)}
-                                            className={cn(
-                                                "px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-1.5 border font-medium",
-                                                store.activeTab === VIS_TABS.MUTUAL ? "bg-surface text-accent border-accent30 shadow-sm" : "bg-transparent text-textMuted border-transparent hover:text-textMain hover:border-border30"
-                                            )}
-                                        >
-                                            <Lucide.CircleDot size={14} /><span className="hidden sm:inline">3. Mutual</span>
-                                        </button>
-                                        <button
-                                            onClick={() => store.setActiveTab(VIS_TABS.CHANNEL)}
-                                            className={cn(
-                                                "px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-1.5 border font-medium",
-                                                store.activeTab === VIS_TABS.CHANNEL ? "bg-surface text-accent border-accent30 shadow-sm" : "bg-transparent text-textMuted border-transparent hover:text-textMain hover:border-border30"
-                                            )}
-                                        >
-                                            <Lucide.Cpu size={14} /><span className="hidden sm:inline">4. Channel</span>
-                                        </button>
-                                        <button
-                                            onClick={() => store.setActiveTab(VIS_TABS.DIVERGENCE)}
-                                            className={cn(
-                                                "px-2.5 sm:px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-1.5 border font-medium",
-                                                store.activeTab === VIS_TABS.DIVERGENCE ? "bg-surface text-accent border-accent30 shadow-sm" : "bg-transparent text-textMuted border-transparent hover:text-textMain hover:border-border30"
-                                            )}
-                                        >
-                                            <Lucide.TrendingUp size={14} /><span className="hidden sm:inline">5. Divergence</span>
+                                            <Lucide.Cpu size={14} /><span>2. Secondary View</span>
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Active Canvas & Controls Stack */}
                                 <div className="space-y-6 flex-1 flex flex-col">
-                                    {store.activeTab === VIS_TABS.ENTROPY && <BinaryEntropyCanvas p={store.binaryP} onPChange={store.setBinaryP} />}
-                                    {store.activeTab === VIS_TABS.HUFFMAN && <HuffmanTreeCanvas tree={store.huffmanTree} codes={store.huffmanCodes} />}
-                                    {store.activeTab === VIS_TABS.MUTUAL && <InformationVennCanvas jointP={store.jointP} />}
-                                    {store.activeTab === VIS_TABS.CHANNEL && <ChannelSimulationCanvas noise={store.channelNoise} snrDb={store.snrDb} />}
-                                    {store.activeTab === VIS_TABS.DIVERGENCE && <DivergenceCanvas gaussP={store.gaussP} gaussQ={store.gaussQ} />}
-
-                                    {/* Dashboard Controls for Selected Tab */}
+                                    <InteractiveCanvasPlaceholder value={store.paramValue} />
                                     <div className="transition-all duration-300 flex-1">
-                                        {store.activeTab === VIS_TABS.ENTROPY && <EntropyDashboard />}
-                                        {store.activeTab === VIS_TABS.HUFFMAN && <HuffmanDashboard />}
-                                        {store.activeTab === VIS_TABS.MUTUAL && <MutualDashboard />}
-                                        {store.activeTab === VIS_TABS.CHANNEL && <ChannelDashboard />}
-                                        {store.activeTab === VIS_TABS.DIVERGENCE && <DivergenceDashboard />}
+                                        <WorkbenchDashboardPlaceholder />
                                     </div>
-
-                                    {/* Related Theory Reading Protocol */}
                                     <RelatedReading sectionIds={TAB_TO_SECTIONS[store.activeTab] || []} />
                                 </div>
                             </div>
@@ -2158,4 +668,3 @@
 </body>
 
 </html>
-

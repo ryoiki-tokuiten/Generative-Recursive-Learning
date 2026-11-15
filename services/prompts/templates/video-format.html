@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interactive SVG Motion Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--f:'SF Pro Display','SF Pro Text',-apple-system,BlinkMacSystemFont,'Google Sans','Plus Jakarta Sans',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+html,body,#viewport{width:100vw;height:100vh;background:#FAF7F0;overflow:hidden}
+body,svg text{font-family:var(--f);font-weight:500;dominant-baseline:central}
+#stage{width:100%;height:100%;display:block}
+</style>
+</head>
+<body>
+<div id="viewport"><svg id="stage" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"></svg></div>
+
+<!-- AGENT GUIDE: Preserve this 1920x1080 60fps SVG motion-graphics presentation engine, including its architectural grid background (`STAGE_DEFS`), spring and bezier physics (`sp`, `springStep`, `easeOut`, `easeInOut`, `envWindow`, `dualSpringSpan`), word-by-word animated typography (`sLine`), tactile 3D-lip cards (`card`, `tbox`, `fPill`), animated arrows (`bArrow`, `oPoly`, `sArrow`), isometric cubes (`isoCube`), and keyboard/scrubbing timeline (`window.seek`, `window.togglePlay`, Spacebar / Left-Right arrows). Adjust `DURATION` and `KNOTS` for your pacing and replace `renderScene1` and `renderScene2` with choreographed SVG acts that visually explain the user's topic. -->
+<script>
+const DURATION = window.DURATION = 60.0;
+const KNOTS = [[0, 0], [60, 60]];
+
+const bg = '#FAF7F0', bgC = '#F2EDE2', bgG = '#EAE4D7', W = '#FFFFFF', ink = '#1E1E2E', mute = '#767268', faint = '#DED8CA', rule = '#CFC8B8',
+  V = '#6C3CE9', Vs = '#E6DEFA', G = '#1F8A5B', Gs = '#D4EFE1', R = '#C94438', Rs = '#F9D8D4', A = '#C87D1E', As = '#FCE6C2', TL = '#197D78', TLs = '#D2ECEA';
+
+const CW = 0.52;
+const TAGS = { v: V, r: R, g: G, a: A, b: ink, G: TL }, SOFT = { [G]: Gs, [A]: As, [TL]: TLs, [R]: Rs };
+const LIP = { [V]: '#4E26B8', [G]: '#156340', [R]: '#9A2E24', [A]: '#9B5E12', [TL]: '#115854', [ink]: '#11111B' };
+const RND = ' stroke-linecap="round" stroke-linejoin="round"';
+
+let STAGE_TOP = 0, STAGE_BOT = 1080, EXTRA_H = 0, P_SHIFT_Y = 0, STAGE_LEFT = 0, STAGE_RIGHT = 1920, VIS_W = 1920, T = 0;
+
+function updateViewportMetrics() {
+  const vw = Math.max(320, window.innerWidth || 1920), vh = Math.max(240, window.innerHeight || 1080), visH = Math.max(1080, 1920 * (vh / vw));
+  STAGE_TOP = (1080 - visH) / 2; STAGE_BOT = 1080 - STAGE_TOP; EXTRA_H = visH - 1080; P_SHIFT_Y = STAGE_BOT - 1080;
+  VIS_W = Math.max(1920, 1080 * (vw / vh)); STAGE_LEFT = (1920 - VIS_W) / 2; STAGE_RIGHT = 1920 - STAGE_LEFT;
+}
+updateViewportMetrics();
+
+const _mCtx = document.createElement('canvas').getContext('2d'), _twCache = new Map();
+let _svgM = null;
+function measureTextW(str, sz = 20, wt = 500) {
+  const s = String(str);
+  if (!s) return 0;
+  const ew = wt <= 500 ? 500 : 600, k = `${ew}:${sz}:${s}`;
+  if (_twCache.has(k)) return _twCache.get(k);
+  let w = 0;
+  if (_svgM) {
+    _svgM.setAttribute('font-size', sz); _svgM.setAttribute('font-weight', ew); _svgM.textContent = s;
+    try { w = _svgM.getComputedTextLength(); } catch (_) {}
+  }
+  if (!w && _mCtx) { _mCtx.font = `${ew} ${sz}px "SF Pro Display",-apple-system,BlinkMacSystemFont,"Google Sans","Plus Jakarta Sans",sans-serif`; w = _mCtx.measureText(s).width * 1.02; }
+  w = w || s.length * sz * CW;
+  if (_svgM) _twCache.set(k, w);
+  return w;
+}
+
+const f1 = n => n.toFixed(1), f3 = n => n.toFixed(3), clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+const lerp = (a, b, u) => a + (b - a) * u, prog = (t0, dur = 1) => clamp((T - t0) / dur, 0, 1);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function mapVideoTime(rawT) {
+  const t = clamp(Number(rawT) || 0, 0, DURATION);
+  for (let i = 0; i < KNOTS.length - 1; i++) {
+    const [r0, s0] = KNOTS[i], [r1, s1] = KNOTS[i + 1];
+    if (t <= r1) return r1 === r0 ? s1 : s0 + ((t - r0) / (r1 - r0)) * (s1 - s0);
+  }
+  return DURATION;
+}
+
+function cubicBezier(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx, cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = u => ((ax * u + bx) * u + cx) * u, sy = u => ((ay * u + by) * u + cy) * u, dx = u => (3 * ax * u + 2 * bx) * u + cx;
+  return x => {
+    if (x <= 0 || x >= 1) return clamp(x, 0, 1);
+    let u = x;
+    for (let i = 0; i < 6; i++) { const e = sx(u) - x, d = dx(u); if (Math.abs(e) < 1e-6 || Math.abs(d) < 1e-6) break; u -= e / d; }
+    return sy(clamp(u, 0, 1));
+  };
+}
+const easeOut = cubicBezier(0.16, 1, 0.3, 1), easeInOut = cubicBezier(0.42, 0, 0.2, 1);
+const springStep = (dt, w = 9, z = 0.88) => dt <= 0 ? 0 : 1 - Math.exp(-z * w * dt) * (Math.cos(w * Math.sqrt(1 - z * z) * dt) + (z / Math.sqrt(1 - z * z)) * Math.sin(w * Math.sqrt(1 - z * z) * dt));
+const sp = (t0, w = 9.5, z = 0.88) => springStep(T - t0, w, z);
+
+function envWindow(tIn, tOut, durIn = 0.85) {
+  const durOut = durIn * 0.6;
+  if (T < tIn || T > tOut + durOut) return { a: 0, y: 14 };
+  if (T < tIn + durIn) { const p = easeOut((T - tIn) / durIn); return { a: p, y: (1 - p) * 14 }; }
+  if (T <= tOut) return { a: 1, y: 0 };
+  const p = easeOut((T - tOut) / durOut);
+  return { a: 1 - p, y: -p * 10 };
+}
+
+function dualSpringSpan(t0, fA, fB, tA, tB) {
+  const a = lerp(fA, tA, sp(t0, 7.5, 0.89)), b = lerp(fB, tB, sp(t0, 12, 0.86));
+  return { start: Math.min(a, b), size: Math.max(2, Math.abs(b - a)) };
+}
+
+const gEnv = (w, body) => w.a <= 0.005 ? '' : `<g opacity="${f3(w.a)}" transform="translate(0, ${f1(w.y)})">${typeof body === 'function' ? body() : body}</g>`;
+
+const lGrad = (id, stops) => `<linearGradient id="${id}" x1="0%" y1="0%" x2="0%" y2="100%">${stops.map(([o, c, a]) => `<stop offset="${o}%" stop-color="${c}" stop-opacity="${a}"/>`).join('')}</linearGradient>`;
+const STAGE_DEFS = `<defs><pattern id="fineGrid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M 48 0 L 0 0 0 48" fill="none" stroke="#EFEAE0" stroke-width="0.8"/></pattern><pattern id="archGrid" width="192" height="192" patternUnits="userSpaceOnUse"><rect width="192" height="192" fill="url(#fineGrid)"/><path d="M 192 0 L 0 0 0 192" fill="none" stroke="#E5DFD3" stroke-width="1.1"/></pattern><radialGradient id="softStageGlow" cx="50%" cy="45%" r="65%"><stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45"/><stop offset="70%" stop-color="#FAF7F0" stop-opacity="0"/><stop offset="100%" stop-color="#EAE3D2" stop-opacity="0.35"/></radialGradient>${lGrad('cardTopSheen', [[0, W, 0.7], [22, W, 0], [100, ink, 0.015]])}${lGrad('recessedGrad', [[0, '#D5CEBF', 0.22], [12, '#D5CEBF', 0.03], [90, W, 0], [100, W, 0.55]])}${lGrad('chartGradGreen', [[0, G, 0.22], [100, G, 0]])}${lGrad('chartGradViolet', [[0, V, 0.14], [100, V, 0]])}</defs>`;
+
+const fRect = (x, y, w, h, rx, fill, stroke = 'none', sw = 1.5, op = 1, dash = '', extra = '') =>
+  `<rect x="${f1(x)}" y="${f1(y)}" width="${f1(w)}" height="${f1(h)}"${rx ? ` rx="${rx}"` : ''} fill="${fill}"${stroke !== 'none' ? ` stroke="${stroke}" stroke-width="${sw}"` : ''}${dash ? ` stroke-dasharray="${dash}"` : ''}${op < 1 ? ` opacity="${f3(op)}"` : ''}${extra}/>`;
+
+function card(x, y, w, h, rx = 10, fill = bgC, stroke = 'none', sw = 1.5, op = 1, dash = '') {
+  if (op <= 0.005 || w <= 0 || h <= 0) return '';
+  if (fill === 'none') return fRect(x, y, w, h, rx, 'none', stroke, sw, op, dash);
+  if ((fill === bg || fill === bgC || fill === bgG) && !LIP[stroke] && !dash) {
+    return `<g opacity="${f3(op)}">${fRect(x, y + 1, w, h, rx, W, 'none', 0, 0.7)}${fRect(x, y, w, h, rx, fill, stroke !== 'none' ? stroke : '#DCD5C6', stroke !== 'none' ? sw : 1.1)}${h >= 34 ? fRect(x, y, w, h, rx, 'url(#recessedGrad)', 'none', 0, 1, '', ' pointer-events="none"') : ''}</g>`;
+  }
+  const hasShadow = !dash && h >= 26 && w >= 40, shY = h >= 160 ? 5 : h >= 60 ? 3 : 1.8, lipY = h >= 140 ? 2.4 : h >= 50 ? 1.8 : 1.2;
+  return `<g opacity="${f3(op)}">` +
+    (hasShadow ? fRect(x, y + shY, w, h, rx, ink, 'none', 0, h >= 160 ? 0.055 : 0.04) : '') +
+    (!dash && stroke !== 'none' ? fRect(x, y + lipY, w, h, rx, LIP[stroke] || '#CFC7B6', 'none', 0, 0.32) : '') +
+    fRect(x, y, w, h, rx, fill, stroke, sw, 1, dash) +
+    (!dash && h >= 28 ? fRect(x + 1, y + 1, Math.max(0, w - 2), Math.max(0, h - 2), Math.max(1, rx - 1), 'url(#cardTopSheen)', 'none', 0, 1, '', ' pointer-events="none"') : '') +
+    (!dash && w >= 180 && h >= 100 && fill === W ? fRect(x + 4.5, y + 4.5, w - 9, h - 9, Math.max(2, rx - 3), 'none', stroke !== 'none' ? stroke : rule, 0.65, 0.22, '', ' pointer-events="none"') : '') + `</g>`;
+}
+
+function label(x, y, str, sz = 20, wt = 500, ...rest) {
+  let fill = ink, anchor = 'middle', op = 1;
+  for (const v of rest) { if (typeof v === 'number') op = v; else if (v && v[0] === '#') fill = v; else if (v) anchor = v; }
+  return op <= 0.005 ? '' : `<text x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor}" font-size="${sz}" font-weight="${wt <= 500 ? 500 : 600}" fill="${fill}" opacity="${f3(op)}">${esc(str)}</text>`;
+}
+
+const tbox = (x, y, w, h, rx, fill, stroke, sw, op, str, sz, wt = 600, tCol = stroke, dash = '') =>
+  card(x, y, w, h, rx, fill, stroke, sw, op, str, sz, wt, tCol, dash) + label(x + w / 2, y + h / 2, str, sz, wt, tCol === 'none' ? ink : tCol, op);
+
+const fPill = (x, y, w, h, rx, fill, stroke, sw, op, str, sz, tCol, tOp = op) =>
+  fRect(x, y, w, h, rx, fill, stroke, sw, op) + label(x + w / 2, y + h / 2, str, sz, 600, tCol, tOp);
+
+function line(x1, y1, x2, y2, stroke = ink, sw = 1.5, op = 1, dash = '', cap = '') {
+  if (op <= 0.005) return '';
+  const c = cap ? ` stroke-linecap="${cap}"` : '';
+  return (!dash && sw >= 2.2 ? `<line x1="${f1(x1)}" y1="${f1(y1 + 1.2)}" x2="${f1(x2)}" y2="${f1(y2 + 1.2)}" stroke="${ink}" stroke-width="${sw + 0.8}"${c} opacity="${f3(op * 0.08)}"/>` : '') +
+    `<line x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}" stroke="${stroke}" stroke-width="${sw}"${c}${dash ? ` stroke-dasharray="${dash}"` : ''} opacity="${f3(op)}"/>`;
+}
+
+function circle(cx, cy, r, fill = W, stroke = 'none', sw = 2, op = 1) {
+  return op <= 0.005 || r <= 0 ? '' :
+    (r >= 5 && fill !== 'none' ? `<circle cx="${f1(cx)}" cy="${f1(cy + 1.2)}" r="${f1(r)}" fill="${ink}" opacity="${f3(op * 0.1)}"/>` : '') +
+    `<circle cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}" fill="${fill}"${stroke !== 'none' ? ` stroke="${stroke}" stroke-width="${sw}"` : ''} opacity="${f3(op)}"/>`;
+}
+
+function sLine(spec, cy, tIn, tOut, sz = 36, durIn = 0.7, stag = 0.09) {
+  const items = [];
+  for (const m of spec.matchAll(/\{([vrgabG]):([^}]+)\}|(\S+)/g)) {
+    if (m[3]) items.push({ text: m[3].replace(/~/g, ' '), weight: 500, color: ink });
+    else m[2].trim().split(/\s+/).forEach(w => items.push({ text: w, weight: 600, color: TAGS[m[1]] }));
+  }
+  const durOut = durIn * 0.55;
+  if (T < tIn || T > tOut + durOut + items.length * 0.04) return '';
+  let prevDy = 0, spans = '', any = false;
+  items.forEach((it, i) => {
+    const wIn = tIn + i * stag, wOut = tOut + i * 0.02;
+    let a = 0, dy = 0;
+    if (T >= wIn && T <= wOut + durOut) {
+      if (T < wIn + durIn) { const p = easeOut((T - wIn) / durIn); a = p; dy = (1 - p) * 14; }
+      else if (T <= wOut) a = 1;
+      else { const p = easeOut((T - wOut) / durOut); a = 1 - p; dy = -p * 9; }
+    }
+    if (a > 0.005) any = true;
+    const dDy = dy - prevDy; prevDy = dy;
+    spans += `<tspan${Math.abs(dDy) > 0.05 ? ` dy="${f1(dDy)}"` : ''} font-weight="${it.weight}" fill="${it.color}" fill-opacity="${f3(a)}">${esc(it.text + (i < items.length - 1 ? ' ' : ''))}</tspan>`;
+  });
+  return any ? `<text x="960" y="${f1(cy)}" text-anchor="middle" font-size="${sz}">${spans}</text>` : '';
+}
+
+function arrowHead(tx, ty, px, py, col, sw, op, hl = 10, spA = 0.48) {
+  const a = Math.atan2(ty - py, tx - px);
+  return `<path d="M ${f1(tx - hl * Math.cos(a - spA))} ${f1(ty - hl * Math.sin(a - spA))} L ${f1(tx)} ${f1(ty)} L ${f1(tx - hl * Math.cos(a + spA))} ${f1(ty - hl * Math.sin(a + spA))}" fill="none" stroke="${col}" stroke-width="${sw}"${RND} opacity="${f3(op)}"/>`;
+}
+
+function bArrow(x1, y1, cx, cy, x2, y2, col = G, sw = 2.2, p = 1, op = 1) {
+  p = clamp(p, 0, 1);
+  if (p <= 0.01 || op <= 0.005) return '';
+  const qx = lerp(x1, cx, p), qy = lerp(y1, cy, p), ex = lerp(qx, lerp(cx, x2, p), p), ey = lerp(qy, lerp(cy, y2, p), p);
+  return `<path d="M ${f1(x1)} ${f1(y1 + 1.4)} Q ${f1(qx)} ${f1(qy + 1.4)} ${f1(ex)} ${f1(ey + 1.4)}" fill="none" stroke="${ink}" stroke-width="${sw + 1}" stroke-linecap="round" opacity="${f3(op * 0.08)}"/>` +
+    `<path d="M ${f1(x1)} ${f1(y1)} Q ${f1(qx)} ${f1(qy)} ${f1(ex)} ${f1(ey)}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" opacity="${f3(op)}"/>` +
+    (p > 0.82 ? arrowHead(ex, ey, qx, qy, col, sw, op * clamp((p - 0.82) / 0.18), 10, 0.48) : '');
+}
+
+function oPoly(pts, col = V, sw = 2.2, p = 1, op = 1, dash = '', withArrow = true, withDots = false) {
+  p = clamp(p, 0, 1);
+  if (p <= 0.01 || op <= 0.005 || pts.length < 2) return '';
+  const segs = pts.slice(0, -1).map((pt, i) => Math.hypot(pts[i + 1].x - pt.x, pts[i + 1].y - pt.y)), total = segs.reduce((a, b) => a + b, 0);
+  if (total <= 0.1) return '';
+  let rem = total * p, d = `M ${f1(pts[0].x)} ${f1(pts[0].y)}`, tx = pts[0].x, ty = pts[0].y, px = tx, py = ty;
+  for (let i = 0; i < segs.length; i++) {
+    const L = segs[i], p0 = pts[i], p1 = pts[i + 1]; px = p0.x; py = p0.y;
+    if (rem >= L) { d += ` L ${f1(p1.x)} ${f1(p1.y)}`; tx = p1.x; ty = p1.y; rem -= L; }
+    else { const u = L > 0 ? rem / L : 0; tx = lerp(p0.x, p1.x, u); ty = lerp(p0.y, p1.y, u); d += ` L ${f1(tx)} ${f1(ty)}`; break; }
+  }
+  return (!dash ? `<path d="${d}" fill="none" stroke="${ink}" stroke-width="${sw + 1.4}"${RND} opacity="${f3(op * 0.09)}"/>` : '') +
+    `<path d="${d}" fill="none" stroke="${col}" stroke-width="${sw}"${RND}${dash ? ` stroke-dasharray="${dash}"` : ''} opacity="${f3(op)}"/>` +
+    (withDots ? circle(pts[0].x, pts[0].y, 3.8, W, col, 1.8, op) + (p > 0.92 ? circle(pts[pts.length - 1].x, pts[pts.length - 1].y, 3.8, col, 'none', 0, op) : '') : '') +
+    (withArrow && p > 0.8 ? arrowHead(tx, ty, px, py, col, sw, op * clamp((p - 0.8) / 0.2), 9, 0.5) : '');
+}
+const sArrow = (x1, y1, x2, y2, col = ink, sw = 2.2, p = 1, op = p, dots = true) => oPoly([{ x: x1, y: y1 }, { x: x2, y: y2 }], col, sw, p, op, '', true, dots);
+
+function isoCube(cx, cy, r = 14, op = 1, isV = false) {
+  if (op <= 0.005 || r <= 0.5) return '';
+  const [cT, cL, cR] = isV ? ['#E3DCFA', V, '#4D26B8'] : ['#BFEAD5', G, '#14603E'], dx = r * 0.866, dy = r * 0.5;
+  const poly = (pts, f) => `<polygon points="${pts}" fill="${f}" stroke="${ink}" stroke-width="1.2" stroke-linejoin="round"/>`;
+  return `<g opacity="${f3(op)}"><ellipse cx="${f1(cx)}" cy="${f1(cy + r + 1.5)}" rx="${f1(dx * 0.9)}" ry="${f1(dy * 0.55)}" fill="${ink}" opacity="0.12"/>` +
+    poly(`${f1(cx)},${f1(cy - r)} ${f1(cx + dx)},${f1(cy - dy)} ${f1(cx)},${f1(cy)} ${f1(cx - dx)},${f1(cy - dy)}`, cT) +
+    poly(`${f1(cx - dx)},${f1(cy - dy)} ${f1(cx)},${f1(cy)} ${f1(cx)},${f1(cy + r)} ${f1(cx - dx)},${f1(cy + dy)}`, cL) +
+    poly(`${f1(cx)},${f1(cy)} ${f1(cx + dx)},${f1(cy - dy)} ${f1(cx + dx)},${f1(cy + dy)} ${f1(cx)},${f1(cy + r)}`, cR) + `</g>`;
+}
+
+// ============================================================================
+// CHOREOGRAPHED PRESENTATION SCENES PLACEHOLDER
+// ============================================================================
+function renderScene1() {
+  if (T > 30) return '';
+  let s = sLine('Opening thesis statement with {v:highlighted key terms}', 240, 0.3, 28, 44) +
+          sLine('and a secondary {g:mechanistic subtitle} below.', 310, 1.5, 28, 32);
+
+  s += gEnv(envWindow(3.0, 28.5, 0.8), () => {
+    const p1 = sp(3.5), p2 = sp(5.0), p3 = sp(6.5);
+    return tbox(340, 480, 320, 110, 12, W, V, 2.2, p1, 'Stage 1: Input', 22, 600, V) +
+           sArrow(660, 535, 800, 535, V, 2.5, p2) +
+           tbox(800, 480, 320, 110, 12, Gs, G, 2.2, p2, 'Stage 2: Transform', 22, 600, G) +
+           sArrow(1120, 535, 1260, 535, G, 2.5, p3) +
+           tbox(1260, 480, 320, 110, 12, As, A, 2.2, p3, 'Stage 3: Output', 22, 600, A);
+  });
+  return s;
+}
+
+function renderScene2() {
+  if (T < 29) return '';
+  const pIn = easeOut(prog(30, 0.85));
+  return `<g transform="translate(0, ${f1((1 - pIn) * 16)})" opacity="${f3(pIn)}">${label(960, 490, 'Presentation Title', 84, 600)}</g>` +
+         sLine('{G:Concept} · {v:Mechanism} · {a:Synthesis}', 600, 31, 59, 36, 0.6, 0.09);
+}
+
+const stageEl = document.getElementById('stage');
+stageEl.innerHTML = STAGE_DEFS + `<g id="stage-bg">${fRect(-2000, -2000, 5920, 5080, 0, bg)}${fRect(-2000, -2000, 5920, 5080, 0, 'url(#archGrid)', 'none', 0, 0.65)}${fRect(-2000, -2000, 5920, 5080, 0, 'url(#softStageGlow)')}</g><text id="svg-measurer" x="-9999" y="-9999" opacity="0" pointer-events="none"></text><g id="scene-root"></g>`;
+_svgM = document.getElementById('svg-measurer');
+const sceneRootEl = document.getElementById('scene-root');
+
+let externalSeekMode = false, startWall = null, pausedAt = null, currentT = 0;
+
+function notifyParent() {
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'presentation-state', t: currentT, paused: pausedAt !== null || externalSeekMode }, '*'); } catch (_) {}
+}
+
+function renderAtTime(rawT) {
+  updateViewportMetrics();
+  T = mapVideoTime(clamp(Number(rawT) || 0, 0, DURATION));
+  sceneRootEl.innerHTML = renderScene1() + renderScene2();
+  notifyParent();
+}
+
+window.addEventListener('resize', () => renderAtTime(currentT));
+window.seek = async function(t) { externalSeekMode = true; currentT = pausedAt = clamp(Number(t) || 0, 0, DURATION); renderAtTime(currentT); };
+window.getCurrentTime = () => currentT;
+window.isPaused = () => pausedAt !== null || externalSeekMode;
+window.togglePlay = () => {
+  externalSeekMode = false;
+  if (pausedAt === null) { pausedAt = currentT; notifyParent(); }
+  else { startWall = performance.now() - pausedAt * 1000; pausedAt = null; notifyParent(); requestAnimationFrame(tick); }
+  return pausedAt === null;
+};
+
+function tick(now) {
+  if (externalSeekMode || pausedAt !== null) return;
+  if (startWall === null) startWall = now - currentT * 1000;
+  currentT = ((now - startWall) / 1000) % DURATION;
+  renderAtTime(currentT);
+  requestAnimationFrame(tick);
+}
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); window.togglePlay(); }
+  else if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
+    e.preventDefault(); externalSeekMode = true;
+    currentT = pausedAt = clamp((pausedAt ?? currentT) + (e.code === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 3 : 0.35), 0, DURATION);
+    renderAtTime(currentT);
+  }
+});
+
+window.ready = false;
+(async () => {
+  try {
+    if (document.fonts) {
+      await Promise.all([document.fonts.load('500 24px "Google Sans"'), document.fonts.load('600 24px "Google Sans"'), document.fonts.ready]);
+      _twCache.clear();
+    }
+  } catch (_) {}
+  const params = new URLSearchParams(window.location.search), tParam = params.get('t');
+  if (tParam !== null) currentT = pausedAt = clamp(Number(tParam) || 0, 0, DURATION);
+  renderAtTime(currentT);
+  window.ready = true;
+  if (!params.has('headless') && pausedAt === null) requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="description" content="An interactive first-principles lesson on the claim that compression is intelligence.">
-    <title>Compression is Intelligence</title>
+    <meta name="description" content="Interactive first-principles lesson.">
+    <title>Interactive Lesson</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -80,23 +80,21 @@
     
     <style>
         :root {
-            /* Anthropic Light Theme (Warm, Creamy, Academic) */
             --ant-bg: #FAF9F6;
             --ant-surface: #FFFFFF;
             --ant-surface-hover: #F2F0EA;
             --ant-text: #2C2C2A;
             --ant-text-muted: #767570;
-            --ant-accent: #D97757; /* Terracotta */
+            --ant-accent: #D97757;
             --ant-accent-hover: #C2674A;
             --ant-border: #E5E3DB;
             --ant-chart-primary: #D97757;
-            --ant-chart-secondary: #7C9682; /* Sage Green */
-            --ant-chart-tertiary: #D4B16A; /* Muted Gold */
+            --ant-chart-secondary: #7C9682;
+            --ant-chart-tertiary: #D4B16A;
             --ant-danger: #C94A4A;
         }
 
         .dark {
-            /* Anthropic Dark Theme (Deep Charcoal, Low Contrast) */
             --ant-bg: #1A1918;
             --ant-surface: #242322;
             --ant-surface-hover: #2D2C2B;
@@ -126,27 +124,18 @@
 
         * { box-sizing: border-box; }
 
-        /* Minimal Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb {
             background-clip: padding-box;
             border: 2px solid transparent;
             background-color: var(--ant-border);
             border-radius: 4px;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: var(--ant-text-muted);
-        }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--ant-text-muted); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Anthropic-style Flat Slider */
         input[type=range].ant-slider {
             -webkit-appearance: none;
             width: 100%;
@@ -169,13 +158,11 @@
             background: var(--ant-accent);
             cursor: pointer;
             -webkit-appearance: none;
-            margin-top: -6px; /* (trackHeight/2) - (thumbHeight/2) */
+            margin-top: -6px;
             transition: transform 0.1s ease;
             box-shadow: none;
         }
-        input[type=range].ant-slider:active::-webkit-slider-thumb {
-            transform: scale(1.2);
-        }
+        input[type=range].ant-slider:active::-webkit-slider-thumb { transform: scale(1.2); }
         input[type=range].ant-slider::-moz-range-track {
             width: 100%;
             height: 2px;
@@ -192,234 +179,50 @@
             border: none;
         }
 
-        /* Typography */
-        .ant-prose {
-            font-family: 'Newsreader', 'Charter', serif;
-        }
-        .ant-prose p { 
-            margin-bottom: 1.5em; 
-            line-height: 1.7; 
-        }
+        .ant-prose { font-family: 'Newsreader', 'Charter', serif; }
+        .ant-prose p { margin-bottom: 1.5em; line-height: 1.7; }
 
-        /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-enter {
-            animation: fadeIn 0.3s ease-out both;
-        }
-        
-        /* Token styling */
-        .token-cell {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            font-size: 12px;
-            font-family: 'ui-monospace', monospace;
-            border-radius: 4px;
-            background: var(--ant-surface);
-            border: 1px solid var(--ant-border);
-            color: var(--ant-text);
-        }
-        .token-cell.highlight {
-            background: var(--ant-accent);
-            color: #fff;
-            border-color: var(--ant-accent);
-        }
-        .dark .token-cell.highlight {
-            color: #1A1918;
-        }
-
+        .animate-enter { animation: fadeIn 0.3s ease-out both; }
     </style>
 </head>
 <body>
     <div id="root"></div>
     
+    <!-- AGENT GUIDE: Preserve this two-pane Anthropic academic layout (left Newsreader serif essay, right Inter sans-serif interactive workbench) and all `ant-*` CSS variables and UI primitives (`Panel`, `Stat`, `AnthropicSlider`, `Button`, `InputText`, `TabPill`). Populate `ARTICLE` with rigorous, mechanism-first sections (`p`, `equation`, `callout`), define your topic's tabs in `VIS_TABS` and `SECTION_TO_TAB`, and replace `PlaceholderDashboard` with real, domain-accurate interactive visualizations and Zustand state that respond directly to user controls. -->
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+        import React, { useState, useEffect, useCallback } from 'react';
         import { createRoot } from 'react-dom/client';
         import { create } from 'zustand';
-        import { z } from 'zod';
         import { clsx } from 'clsx';
         import { twMerge } from 'tailwind-merge';
         import _ from 'lodash';
         import * as Lucide from 'lucide-react';
-        import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid, Legend, Cell } from 'recharts';
 
         const cn = (...inputs) => twMerge(clsx(inputs));
 
         const VIS_TABS = Object.freeze({
-            CODING: 'coding', ENTROPY: 'entropy', MDL: 'mdl', PREDICTION: 'prediction', LIMITS: 'limits'
+            TAB_1: 'tab-1',
+            TAB_2: 'tab-2'
         });
 
         const ARTICLE = Object.freeze([
             {
-                id: 'sec-thesis',
-                title: '1. What the claim actually says',
+                id: 'sec-1',
+                title: '1. Section title placeholder',
                 blocks: [
-                    { type: 'p', text: '“Compression is intelligence” is useful only if we state the claim precisely. The strong idea is not that every file compressor is intelligent. The idea is that learning a compact description of data requires discovering regularities, and those regularities are exactly what a system can use to predict, generalize, and form abstractions.' },
-                    { type: 'p', text: 'Suppose we observe a finite sequence x. A learner can always store x verbatim. That solution explains nothing. A better learner finds a shorter program or model M plus a smaller remainder r such that M and r reconstruct x. The compression comes from moving repeated structure out of the data and into the model.' },
-                    { type: 'equation', label: 'The basic accounting identity', text: 'description length = bits(model) + bits(data | model)' },
-                    { type: 'p', text: 'The phrase becomes interesting when “shorter description” is tied to out-of-sample prediction. A compact model earns its compression by assigning high probability to what repeatedly occurs and low probability to what does not. If the same model also predicts unseen samples well, compression has exposed real structure rather than merely memorized the training set.' }
-                ]
-            },
-            {
-                id: 'sec-regularity',
-                title: '2. Regularity is the source of compressibility',
-                blocks: [
-                    { type: 'p', text: 'Compression can only remove redundancy. If every symbol were independent and uniformly random, there would be no stable pattern to exploit. A shorter description becomes possible when observations are biased, repeated, correlated, generated by a small rule, or constrained by context.' },
-                    { type: 'p', text: 'This gives us the first technical bridge to learning. A learning algorithm receives examples and searches for structure that lets it predict parts of those examples from other parts. A compressor receives symbols and searches for structure that lets it encode some symbols using fewer bits given previous symbols or a learned model. The optimization target is different in form, but the useful information is the same regularity.' },
-                    { type: 'callout', title: 'Important boundary', text: 'Compressibility is evidence of regularity, not automatically evidence of understanding. A compressor can exploit local statistics without representing causes, goals, or interventions. The thesis becomes stronger as the compression model must transfer across contexts and support prediction under change.' }
-                ]
-            },
-            {
-                id: 'sec-entropy',
-                title: '3. Entropy tells us the irreducible average cost',
-                blocks: [
-                    { type: 'p', text: 'Shannon entropy answers a specific question. If symbols are drawn from a known probability distribution p, what is the smallest average number of bits needed per symbol by an optimal lossless code? For a discrete source, the lower bound is the expected surprise.' },
-                    { type: 'equation', label: 'Entropy', text: 'H(X) = - Σₓ p(x) log₂ p(x)' },
-                    { type: 'p', text: 'The term -log₂ p(x) is the ideal code length for outcome x. Common outcomes receive short descriptions because they are easy to anticipate. Rare outcomes receive long descriptions because they carry more surprise. Entropy is the probability-weighted average of those lengths.' },
-                    { type: 'p', text: 'For a fair binary source, p(0)=p(1)=0.5 and H=1 bit per symbol. If p(0)=0.99, the entropy falls to about 0.081 bits per symbol. The source is compressible because most observations are predictable from one number: the strong bias toward zero.' }
-                ]
-            },
-            {
-                id: 'sec-prob-code',
-                title: '4. Probability models and codes are two views of one object',
-                blocks: [
-                    { type: 'p', text: 'A probabilistic predictor can be turned into a code. If a model assigns probability q(x) to an outcome, an ideal arithmetic code spends about -log₂ q(x) bits on that outcome. This is not a metaphor. Modern entropy coders operationalize this connection closely enough that negative log-likelihood is literally an estimate of compressed length.' },
-                    { type: 'equation', label: 'Prediction becomes code length', text: 'L(x) = -log₂ q(x)' },
-                    { type: 'p', text: 'Now consider a sequence x₁,…,xₙ. A model predicts each next symbol from the previous context. The total ideal description length is the sum of the next-symbol surprises. Better prediction means larger probability on the symbols that actually arrive, which means fewer bits.' },
-                    { type: 'equation', label: 'Sequential coding', text: 'L(x₁:n) = - Σₜ log₂ q(xₜ | x₁:t-1)' },
-                    { type: 'p', text: 'This identity is why language modeling, density estimation, and compression are mathematically close. Training a model by minimizing cross-entropy is training it to reduce the expected code length of the data under its predictive distribution.' }
-                ]
-            },
-            {
-                id: 'sec-model-residual',
-                title: '5. A model compresses by separating rule from residual',
-                blocks: [
-                    { type: 'p', text: 'A useful decomposition is model plus residual. The model records what repeats across observations. The residual records what the model still fails to predict. If the model captures more genuine structure, residuals become cheaper. If the model is too complicated, its own description becomes expensive.' },
-                    { type: 'p', text: 'For a sequence such as ABABABABABAB, a short model can say “alternate A and B for six cycles.” The residual is nearly empty. For a sequence produced by fair coin flips, no comparably short rule can specify the exact realization without storing almost all of it.' },
-                    { type: 'callout', title: 'Toy example versus real learning', text: 'A toy compressor can expose obvious repetition with run-length or dictionary coding. Real learning systems face high-dimensional data where useful regularities are distributed, approximate, hierarchical, and context-dependent. The same accounting principle remains: structure is stored in parameters or programs, while exceptions remain in the residual.' }
-                ]
-            },
-            {
-                id: 'sec-mdl',
-                title: '6. Minimum description length turns the idea into model selection',
-                blocks: [
-                    { type: 'p', text: 'Minimum description length, or MDL, asks us to choose the model that minimizes the number of bits required to describe both the model and the data given that model. It directly penalizes two bad extremes: a model that is too simple leaves a large residual, while a model that memorizes everything has an enormous model description.' },
-                    { type: 'equation', label: 'Two-part MDL objective', text: 'M* = argmin_M [ L(M) + L(D | M) ]' },
-                    { type: 'p', text: 'The crucial step is that model complexity must be paid for. If we score only training likelihood, a sufficiently flexible model can encode accidental details. Once the parameters, structure, or effective degrees of freedom have a cost, the system must decide which regularities are worth keeping.' },
-                    { type: 'p', text: 'This is compression as inductive bias. The learner prefers hypotheses that explain many observations with a comparatively small amount of reusable structure.' }
-                ]
-            },
-            {
-                id: 'sec-kolmogorov',
-                title: '7. Kolmogorov complexity is the clean ideal and the hard limit',
-                blocks: [
-                    { type: 'p', text: 'Kolmogorov complexity K(x) is the length of the shortest program, on a fixed universal computer, that outputs x and halts. It captures the purest version of “understanding as compression”: the best explanation of an object is the shortest executable description that generates it.' },
-                    { type: 'equation', label: 'Algorithmic complexity', text: 'K_U(x) = min{|p| : U(p) = x}' },
-                    { type: 'p', text: 'Two facts matter. First, K(x) depends on the reference machine only up to an additive constant, so long descriptions share a robust notion of relative simplicity. Second, K(x) is not computable in general. There is no algorithm that can always certify the shortest possible program for arbitrary x.' },
-                    { type: 'p', text: 'That non-computability matters for the intelligence thesis. An actual learner cannot search all programs and prove global optimality. Practical intelligence uses restricted model classes, finite compute, approximate optimization, priors, and learned search procedures.' }
-                ]
-            },
-            {
-                id: 'sec-statistic',
-                title: '8. Good compression keeps the sufficient structure',
-                blocks: [
-                    { type: 'p', text: 'A compressed representation is useful for intelligence when it preserves the information needed for future tasks while discarding irrelevant detail. In statistics, a sufficient statistic preserves all information in the sample that matters for estimating a parameter under a specified model.' },
-                    { type: 'p', text: 'The important phrase is “under a specified model.” Sufficiency is task- and assumption-dependent. A representation that is sufficient for predicting the next token may not be sufficient for planning an intervention, explaining a causal mechanism, or recognizing a rare safety constraint.' },
-                    { type: 'callout', title: 'What intelligence needs from compression', text: 'The representation must be compact enough to generalize, but not so compressed that it deletes variables needed for the decisions the system will later face.' }
-                ]
-            },
-            {
-                id: 'sec-rate-distortion',
-                title: '9. Intelligence often needs lossy compression, not perfect reconstruction',
-                blocks: [
-                    { type: 'p', text: 'Lossless compression must preserve every bit of the original input. Intelligence usually does not need that. A useful internal representation can discard detail as long as the discarded information does not matter for the task. This is the setting of rate-distortion theory.' },
-                    { type: 'equation', label: 'Rate-distortion tradeoff', text: 'minimize  R + λD' },
-                    { type: 'p', text: 'R is the number of bits used by the representation. D is a distortion measure that says how much relevant information was lost. The multiplier λ determines how much distortion we are willing to tolerate to save bits. Change the distortion measure and the preferred representation changes.' },
-                    { type: 'p', text: 'This is a deeper version of the thesis. Intelligence is not about preserving the world pixel by pixel. It is about preserving what is predictive or decision-relevant at the right level of detail.' }
-                ]
-            },
-            {
-                id: 'sec-abstraction',
-                title: '10. Abstraction is compression with invariance',
-                blocks: [
-                    { type: 'p', text: 'An abstraction groups many surface forms under one reusable representation. If several observations support the same prediction, a learner can save capacity by representing their shared structure once instead of storing each case independently.' },
-                    { type: 'p', text: 'In machine learning, this appears as latent variables, embeddings, features, clusters, state abstractions, and learned world models. A good representation makes relevant distinctions easy and irrelevant variation cheap. That is a form of compression because many raw configurations map to fewer internal states.' },
-                    { type: 'p', text: 'But abstraction only helps when the invariance is correct. If two situations look similar but require different actions, collapsing them destroys information. Compression quality must therefore be judged against future prediction or control, not only against how small the representation becomes.' }
-                ]
-            },
-            {
-                id: 'sec-compression-prediction',
-                title: '11. A compressor can make a prediction by asking which continuation is cheapest',
-                blocks: [
-                    { type: 'p', text: 'The probability-code equivalence gives a concrete prediction procedure. Suppose we have observed a context c and want to predict the next symbol a. For each candidate a, estimate the extra code length required to encode c followed by a. The candidate with the smallest incremental code length is the one the compressor considers most expected.' },
-                    { type: 'equation', label: 'Compression-based next-symbol score', text: 'score(a) = L(ca) - L(c)' },
-                    { type: 'p', text: 'If the code is induced by a probabilistic model, the score is approximately -log₂ p(a|c). Lower additional length means higher conditional probability. This makes prediction and compression operationally interchangeable for sequence models.' },
-                    { type: 'p', text: 'The visualizer uses a finite-order Markov code to expose this mechanism. It is intentionally a toy model. A modern neural language model replaces the small context table with a learned function over long contexts, but its cross-entropy objective still measures expected code length.' }
-                ]
-            },
-            {
-                id: 'sec-bayes',
-                title: '12. Bayesian learning also pays for complexity',
-                blocks: [
-                    { type: 'p', text: 'Bayesian inference and compression meet through the same accounting. A prior assigns probability to models before seeing data. A likelihood assigns probability to the data under each model. Taking negative logarithms turns multiplication into addition and probabilities into code lengths.' },
-                    { type: 'equation', label: 'Bayes in code-length form', text: '-log p(M|D) = -log p(D|M) - log p(M) + constant' },
-                    { type: 'p', text: 'The term -log p(M) acts like a model description length. A simple or strongly expected model gets a shorter prior code. The term -log p(D|M) is the data code length under that model. Maximum a posteriori estimation therefore balances fit and complexity in a way closely related to MDL.' },
-                    { type: 'p', text: 'The equivalence is not exact for every coding convention or every Bayesian procedure, but the structural connection is strong: good hypotheses must explain the observations without requiring an implausibly expensive hypothesis description.' }
-                ]
-            },
-            {
-                id: 'sec-overfit',
-                title: '13. Overfitting is compression that fails to transfer',
-                blocks: [
-                    { type: 'p', text: 'A model can compress its training sample while learning accidental details that do not recur. This is why training compression alone is not enough. We need either an explicit cost for model complexity, evaluation on held-out data, a universal coding scheme, or some other mechanism that prevents the learner from hiding the dataset inside the model.' },
-                    { type: 'p', text: 'The MDL visualizer fits Markov models of increasing order. Higher orders can drive training code length downward because they condition on more specific contexts. Eventually the context table becomes large and sparse. The model-cost term rises, and held-out code length can worsen because those detailed contexts do not have enough evidence.' },
-                    { type: 'callout', title: 'The test that matters', text: 'A useful compressed representation should shorten future data drawn from the same structure, not merely re-encode the observations that were already seen.' }
-                ]
-            },
-            {
-                id: 'sec-randomness',
-                title: '14. Randomness is the part no intelligence can compress away',
-                blocks: [
-                    { type: 'p', text: 'Some data are incompressible relative to a model class. Algorithmically random strings have no description substantially shorter than the strings themselves. Statistical noise also creates residual uncertainty that a predictor cannot eliminate even when the underlying distribution is known.' },
-                    { type: 'p', text: 'This is not a failure of the learner. If the environment contains genuine entropy, the best possible model should represent that uncertainty rather than inventing a false pattern. A system that always finds a compact story can be worse than one that knows when the residual is irreducible.' },
-                    { type: 'p', text: 'The limit is important because “more compression” is not always “more truth.” A wrong model can compress a small sample by chance. Reliable intelligence needs calibrated uncertainty and evidence that the regularity survives new data.' }
-                ]
-            },
-            {
-                id: 'sec-agency',
-                title: '15. Compression does not by itself give agency, causality, or goals',
-                blocks: [
-                    { type: 'p', text: 'The compression thesis is strongest as a theory of learning and representation. It is weaker as a complete theory of intelligence. An agent must often choose actions, collect information, reason about interventions, maintain goals, allocate compute, and trade off consequences across time.' },
-                    { type: 'p', text: 'A passive compressor models the distribution of observations. Causal reasoning asks a different question: what would happen if the system intervened and changed a variable? Two models can compress observational data equally well while making different predictions under intervention.' },
-                    { type: 'p', text: 'Likewise, compression does not specify what an agent should value. A perfect predictive model can describe harmful and beneficial outcomes equally well. Goals, preferences, constraints, and action selection require additional structure.' },
-                    { type: 'callout', title: 'Precise conclusion', text: 'Compression is a powerful account of discovering reusable structure. It is not, by itself, a full account of intelligent action.' }
-                ]
-            },
-            {
-                id: 'sec-strongest',
-                title: '16. The strongest defensible version of the thesis',
-                blocks: [
-                    { type: 'p', text: 'A technically strong version of “compression is intelligence” is this: a central part of intelligence is constructing compact internal models that preserve the information needed to predict and act across many situations. Compactness matters because it forces the model to reuse structure. Prediction matters because it tests whether that structure is real. Task relevance matters because not every detail deserves to be preserved.' },
-                    { type: 'p', text: 'Under that framing, Shannon entropy explains the cost of uncertainty, probabilistic coding ties prediction to bits, MDL explains why complexity must be paid for, Kolmogorov complexity gives the unattainable ideal of shortest explanation, and rate-distortion theory explains why useful representations can discard irrelevant detail.' },
-                    { type: 'p', text: 'The slogan is therefore best treated as a design principle, not an identity theorem. When a system becomes better at finding compact, transferable, decision-relevant structure, it becomes better at several core operations we call intelligent. But intelligence also includes choosing what to model, what to preserve, what to do, and what consequences matter.' }
+                    { type: 'p', text: 'Replace this placeholder with rigorous, mechanism-first lesson prose.' },
+                    { type: 'equation', label: 'Equation label', text: 'f(x) = ...' },
+                    { type: 'callout', title: 'Key distinction', text: 'Highlight essential boundaries or conceptual nuances here.' }
                 ]
             }
         ]);
 
         const SECTION_TO_TAB = Object.freeze({
-            'sec-thesis': VIS_TABS.CODING, 'sec-regularity': VIS_TABS.CODING,
-            'sec-entropy': VIS_TABS.ENTROPY, 'sec-prob-code': VIS_TABS.ENTROPY,
-            'sec-model-residual': VIS_TABS.MDL, 'sec-mdl': VIS_TABS.MDL, 'sec-kolmogorov': VIS_TABS.MDL,
-            'sec-statistic': VIS_TABS.PREDICTION, 'sec-rate-distortion': VIS_TABS.LIMITS,
-            'sec-abstraction': VIS_TABS.PREDICTION, 'sec-compression-prediction': VIS_TABS.PREDICTION,
-            'sec-bayes': VIS_TABS.PREDICTION, 'sec-overfit': VIS_TABS.MDL,
-            'sec-randomness': VIS_TABS.LIMITS, 'sec-agency': VIS_TABS.LIMITS, 'sec-strongest': VIS_TABS.CODING
+            'sec-1': VIS_TABS.TAB_1
         });
 
         const TAB_TO_SECTIONS = _.reduce(SECTION_TO_TAB, (acc, tab, sectionId) => {
@@ -428,300 +231,15 @@
             return acc;
         }, {});
 
-        const SequenceSchema = z.string().min(4, 'Use at least 4 symbols.').max(240, 'Keep the sequence at 240 symbols or fewer.').regex(/^[A-Da-d\s]+$/, 'Only A, B, C, D, and spaces are allowed.');
-        const SeedSchema = z.string().min(1, 'Seed cannot be empty.').max(32, 'Seed must be 32 characters or fewer.').regex(/^[A-Za-z0-9_-]+$/, 'Use letters, numbers, _ or -.');
-        
-        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-        const log2 = (value) => Math.log(value) / Math.log(2);
-        const safeLog2 = (value) => value > 0 ? log2(value) : 0;
-        const normalizeSequence = (value) => value.toUpperCase().replace(/\s+/g, '');
-        
-        const hashSeed = (text) => {
-            let h = 2166136261 >>> 0;
-            for (let i = 0; i < text.length; i++) {
-                h ^= text.charCodeAt(i);
-                h = Math.imul(h, 16777619);
-            }
-            return h >>> 0;
-        };
-
-        const mulberry32 = (seed) => {
-            let a = seed >>> 0;
-            return () => {
-                a |= 0; a = a + 0x6D2B79F5 | 0;
-                let t = Math.imul(a ^ a >>> 15, 1 | a);
-                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-                return ((t ^ t >>> 14) >>> 0) / 4294967296;
-            };
-        };
-
-        const countsOf = (sequence) => {
-            const counts = {};
-            for (const symbol of sequence) counts[symbol] = (counts[symbol] || 0) + 1;
-            return counts;
-        };
-
-        const alphabetOf = (sequence) => {
-            const unique = Array.from(new Set(sequence.split(''))).sort();
-            return unique.length ? unique : ['A', 'B'];
-        };
-
-        const empiricalEntropy = (sequence) => {
-            const n = sequence.length;
-            if (!n) return 0;
-            const counts = countsOf(sequence);
-            return Object.values(counts).reduce((sum, count) => {
-                const p = count / n;
-                return sum - p * safeLog2(p);
-            }, 0);
-        };
-
-        const fixedWidthBits = (sequence) => {
-            if (!sequence.length) return 0;
-            const k = Math.max(2, alphabetOf(sequence).length);
-            const bitsPerSymbol = Math.ceil(log2(k));
-            return sequence.length * bitsPerSymbol;
-        };
-
-        const idealIIDBits = (sequence, smoothing = 0.5) => {
-            const n = sequence.length;
-            if (!n) return 0;
-            const alphabet = alphabetOf(sequence);
-            const counts = countsOf(sequence);
-            const denominator = n + smoothing * alphabet.length;
-            let bits = 0;
-            for (const symbol of sequence) {
-                const p = ((counts[symbol] || 0) + smoothing) / denominator;
-                bits += -safeLog2(p);
-            }
-            return bits;
-        };
-
-        const eliasGammaLength = (positiveInteger) => {
-            const value = Math.max(1, Math.floor(positiveInteger));
-            const floorLog = Math.floor(log2(value));
-            return 2 * floorLog + 1;
-        };
-
-        const runLengthBits = (sequence) => {
-            if (!sequence.length) return 0;
-            const alphabet = alphabetOf(sequence);
-            const symbolBits = Math.ceil(log2(Math.max(2, alphabet.length)));
-            let bits = 0, current = sequence[0], run = 1;
-            for (let i = 1; i < sequence.length; i++) {
-                if (sequence[i] === current) run += 1;
-                else {
-                    bits += symbolBits + eliasGammaLength(run);
-                    current = sequence[i];
-                    run = 1;
-                }
-            }
-            bits += symbolBits + eliasGammaLength(run);
-            return bits;
-        };
-
-        const lz78Bits = (sequence) => {
-            if (!sequence.length) return { bits: 0, phrases: 0 };
-            const alphabet = alphabetOf(sequence);
-            const symbolBits = Math.ceil(log2(Math.max(2, alphabet.length + 1)));
-            const dictionary = new Map();
-            let phrase = '', phrases = 0, bits = 0, dictionarySize = 1;
-            for (const symbol of sequence) {
-                const candidate = phrase + symbol;
-                if (dictionary.has(candidate)) { phrase = candidate; continue; }
-                const pointerBits = Math.max(1, Math.ceil(log2(dictionarySize + 1)));
-                bits += pointerBits + symbolBits;
-                dictionary.set(candidate, dictionarySize);
-                dictionarySize += 1; phrases += 1; phrase = '';
-            }
-            if (phrase.length) {
-                bits += Math.max(1, Math.ceil(log2(dictionarySize + 1)));
-                phrases += 1;
-            }
-            return { bits, phrases };
-        };
-
-        const makeContextCounts = (sequence, order, alphabet) => {
-            const contexts = new Map();
-            for (let i = 0; i < sequence.length; i++) {
-                const contextStart = Math.max(0, i - order);
-                const context = sequence.slice(contextStart, i).padStart(order, '^');
-                if (!contexts.has(context)) {
-                    const row = {}; alphabet.forEach(symbol => row[symbol] = 0);
-                    contexts.set(context, row);
-                }
-                const row = contexts.get(context);
-                row[sequence[i]] = (row[sequence[i]] || 0) + 1;
-            }
-            return contexts;
-        };
-
-        const markovCode = (sequence, order, options = {}) => {
-            const smoothing = options.smoothing ?? 0.5;
-            const alphabet = options.alphabet || alphabetOf(sequence);
-            const trainSequence = options.trainSequence || sequence;
-            if (!sequence.length) return { dataBits: 0, modelBits: 0, totalBits: 0, contexts: 0 };
-            const counts = makeContextCounts(trainSequence, order, alphabet);
-            let dataBits = 0;
-            for (let i = 0; i < sequence.length; i++) {
-                const contextStart = Math.max(0, i - order);
-                const context = sequence.slice(contextStart, i).padStart(order, '^');
-                const row = counts.get(context);
-                const total = row ? alphabet.reduce((sum, symbol) => sum + (row[symbol] || 0), 0) : 0;
-                const count = row ? (row[sequence[i]] || 0) : 0;
-                const probability = (count + smoothing) / (total + smoothing * alphabet.length);
-                dataBits += -safeLog2(probability);
-            }
-            const contexts = counts.size;
-            const freeParameters = contexts * Math.max(1, alphabet.length - 1);
-            const precisionBits = Math.max(1, Math.ceil(log2(trainSequence.length + 1)));
-            const modelBits = freeParameters * 0.5 * precisionBits;
-            return { dataBits, modelBits, totalBits: dataBits + modelBits, contexts };
-        };
-
-        const nextSymbolDistribution = (contextSequence, order, alphabet) => {
-            const counts = makeContextCounts(contextSequence, order, alphabet);
-            const context = contextSequence.slice(Math.max(0, contextSequence.length - order)).padStart(order, '^');
-            const row = counts.get(context) || {};
-            const smoothing = 0.5;
-            const total = alphabet.reduce((sum, symbol) => sum + (row[symbol] || 0), 0);
-            const distribution = alphabet.map(symbol => ({
-                symbol, count: row[symbol] || 0,
-                probability: ((row[symbol] || 0) + smoothing) / (total + smoothing * alphabet.length)
-            }));
-            const normalizer = distribution.reduce((sum, item) => sum + item.probability, 0);
-            return distribution.map(item => ({
-                ...item, probability: item.probability / normalizer, bits: -safeLog2(item.probability / normalizer)
-            }));
-        };
-
-        const generateStructuredSequence = ({ seed, length, regularity, persistence }) => {
-            const random = mulberry32(hashSeed(seed));
-            const motifs = ['ABAC', 'AABC', 'ABCD', 'ABBAC', 'ABCACB', 'AABBCD'];
-            const motif = motifs[Math.floor(random() * motifs.length)];
-            const alphabet = ['A', 'B', 'C', 'D'];
-            let output = '', previous = motif[0];
-            for (let i = 0; i < length; i++) {
-                const target = motif[i % motif.length];
-                let symbol = target;
-                if (random() > regularity) symbol = alphabet[Math.floor(random() * alphabet.length)];
-                if (i > 0 && random() < persistence) symbol = previous;
-                output += symbol; previous = symbol;
-            }
-            return output;
-        };
-
-        const entropyBinary = (p) => {
-            if (p <= 0 || p >= 1) return 0;
-            return -p * log2(p) - (1 - p) * log2(1 - p);
-        };
-
-        const generateBinarySample = ({ seed, length, probabilityOne }) => {
-            const random = mulberry32(hashSeed(seed + '-binary'));
-            let output = '';
-            for (let i = 0; i < length; i++) output += random() < probabilityOne ? '1' : '0';
-            return output;
-        };
-
-        const generateSignal = ({ seed, samples = 128, noise = 0.08 }) => {
-            const random = mulberry32(hashSeed(seed + '-signal'));
-            const data = [];
-            for (let i = 0; i < samples; i++) {
-                const t = i / Math.max(1, samples - 1);
-                const base = 0.52 * Math.sin(2 * Math.PI * 2 * t) + 0.26 * Math.sin(2 * Math.PI * 5 * t + 0.6) + (t > 0.58 ? 0.22 : -0.08);
-                const jitter = (random() - 0.5) * 2 * noise;
-                data.push({ index: i, original: clamp(base + jitter, -1, 1) });
-            }
-            return data;
-        };
-
-        const quantizeSignal = (signal, levels) => {
-            const safeLevels = Math.max(2, Math.floor(levels));
-            const step = 2 / (safeLevels - 1);
-            const quantized = signal.map(point => {
-                const bucket = Math.round((point.original + 1) / step);
-                const reconstructed = -1 + bucket * step;
-                return { ...point, bucket, reconstructed: clamp(reconstructed, -1, 1) };
-            });
-            const mse = quantized.reduce((sum, point) => {
-                const error = point.original - point.reconstructed;
-                return sum + error * error;
-            }, 0) / Math.max(1, quantized.length);
-            const bucketSequence = quantized.map(point => String.fromCharCode(65 + point.bucket));
-            const rate = empiricalEntropy(bucketSequence.join(''));
-            return { data: quantized, mse, rate };
-        };
-
-        const computeRateDistortionCurve = (signal, lambda) => {
-            const rows = [];
-            for (let levels = 2; levels <= 32; levels++) {
-                const result = quantizeSignal(signal, levels);
-                rows.push({ levels, rate: result.rate, distortion: result.mse, objective: result.rate + lambda * result.mse });
-            }
-            return rows;
-        };
-
-        const summarizeCompressors = (sequence) => {
-            const normalized = normalizeSequence(sequence);
-            const raw = fixedWidthBits(normalized);
-            const iid = idealIIDBits(normalized);
-            const rle = runLengthBits(normalized);
-            const lz = lz78Bits(normalized);
-            const markov1 = markovCode(normalized, 1);
-            const markov2 = markovCode(normalized, 2);
-            return [
-                { name: 'Fixed width', bits: raw, model: 'No learned structure', note: 'Reference cost' },
-                { name: 'IID probability', bits: iid, model: 'Global symbol frequencies', note: 'Captures bias only' },
-                { name: 'Run-length', bits: rle, model: 'Repeated adjacent symbols', note: 'Captures long runs' },
-                { name: 'LZ78 estimate', bits: lz.bits, model: `${lz.phrases} parsed phrases`, note: 'Captures recurring substrings' },
-                { name: 'Markov order 1', bits: markov1.totalBits, model: `${markov1.contexts} contexts`, note: 'Pays model cost' },
-                { name: 'Markov order 2', bits: markov2.totalBits, model: `${markov2.contexts} contexts`, note: 'Richer conditional structure' }
-            ].map(item => ({ ...item, ratio: raw > 0 ? item.bits / raw : 1, savings: raw > 0 ? 1 - item.bits / raw : 0 }));
-        };
-
-        const buildMDLRows = (sequence) => {
-            const normalized = normalizeSequence(sequence);
-            const splitIndex = Math.max(4, Math.floor(normalized.length * 0.7));
-            const train = normalized.slice(0, splitIndex);
-            const test = normalized.slice(splitIndex);
-            const alphabet = alphabetOf(normalized);
-            const rows = [];
-            for (let order = 0; order <= 5; order++) {
-                const training = markovCode(train, order, { alphabet, trainSequence: train });
-                const testScore = markovCode(test, order, { alphabet, trainSequence: train });
-                rows.push({
-                    order, trainDataBits: training.dataBits, modelBits: training.modelBits,
-                    mdlBits: training.totalBits, heldOutBits: testScore.dataBits, contexts: training.contexts,
-                    testBitsPerSymbol: test.length ? testScore.dataBits / test.length : 0
-                });
-            }
-            return { train, test, rows };
-        };
-
-        const AppStateSchema = z.object({
-            regularity: z.number().min(0).max(1), persistence: z.number().min(0).max(0.9),
-            sampleLength: z.number().int().min(24).max(200), entropyBias: z.number().min(0.01).max(0.99),
-            markovOrder: z.number().int().min(0).max(5), quantLevels: z.number().int().min(2).max(32),
-            distortionWeight: z.number().min(0).max(100), signalNoise: z.number().min(0).max(0.5)
-        });
-
         const useLessonStore = create((set, get) => ({
-            activeTab: VIS_TABS.CODING, activeSection: ARTICLE[0].id, mobileView: 'visuals',
+            activeTab: VIS_TABS.TAB_1,
+            activeSection: ARTICLE[0].id,
+            mobileView: 'visuals',
             theme: localStorage.getItem('anthropic-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
-            fontSizeMultiplier: 1.0, seed: 'structure-17', seedError: '',
-            sequence: 'ABACABACABACABACABADABACABACABAC', sequenceDraft: 'ABACABACABACABACABADABACABACABAC', sequenceError: '',
-            regularity: 0.92, persistence: 0.08, sampleLength: 80, entropyBias: 0.82, markovOrder: 2,
-            quantLevels: 8, distortionWeight: 18, signalNoise: 0.08, renderTick: 0,
+            fontSizeMultiplier: 1.0,
+            paramValue: 0.5,
 
-            update: (partial) => {
-                try {
-                    const numericKeys = ['regularity', 'persistence', 'sampleLength', 'entropyBias', 'markovOrder', 'quantLevels', 'distortionWeight', 'signalNoise'];
-                    const numericPartial = {};
-                    numericKeys.forEach(key => { if (partial[key] !== undefined) numericPartial[key] = partial[key]; });
-                    if (Object.keys(numericPartial).length) AppStateSchema.partial().parse(numericPartial);
-                    set(partial);
-                } catch (error) { console.error('State validation failed', error); }
-            },
+            update: (partial) => set(partial),
             toggleTheme: () => {
                 const newTheme = get().theme === 'dark' ? 'light' : 'dark';
                 set({ theme: newTheme });
@@ -730,34 +248,6 @@
             },
             increaseFontSize: () => set(state => ({ fontSizeMultiplier: Math.min(1.5, state.fontSizeMultiplier + 0.1) })),
             decreaseFontSize: () => set(state => ({ fontSizeMultiplier: Math.max(0.8, state.fontSizeMultiplier - 0.1) })),
-            setSequenceDraft: (value) => {
-                const result = SequenceSchema.safeParse(value);
-                set({ sequenceDraft: value, sequenceError: result.success ? '' : result.error.issues[0]?.message || 'Invalid sequence.' });
-            },
-            commitSequence: () => {
-                const draft = get().sequenceDraft;
-                const result = SequenceSchema.safeParse(draft);
-                if (!result.success) { set({ sequenceError: result.error.issues[0]?.message || 'Invalid sequence.' }); return false; }
-                const normalized = normalizeSequence(draft);
-                set({ sequence: normalized, sequenceDraft: normalized, sequenceError: '', renderTick: Date.now() });
-                return true;
-            },
-            setSeed: (value) => {
-                const result = SeedSchema.safeParse(value);
-                set({ seed: value, seedError: result.success ? '' : result.error.issues[0]?.message || 'Invalid seed.' });
-            },
-            generateSequence: () => {
-                const state = get();
-                const seedResult = SeedSchema.safeParse(state.seed);
-                if (!seedResult.success) { set({ seedError: seedResult.error.issues[0]?.message || 'Invalid seed.' }); return; }
-                const generated = generateStructuredSequence({ seed: state.seed, length: state.sampleLength, regularity: state.regularity, persistence: state.persistence });
-                set({ sequence: generated, sequenceDraft: generated, sequenceError: '', renderTick: Date.now() });
-            },
-            randomizeSeed: () => {
-                const value = `seed-${Math.floor(Math.random() * 999999)}`;
-                set({ seed: value, seedError: '' });
-                get().generateSequence();
-            }
         }));
 
         class ErrorBoundary extends React.Component {
@@ -833,311 +323,35 @@
             </div>
         );
 
-        const SequenceWorkbench = ({ compact = false }) => {
+        const PlaceholderDashboard = () => {
             const store = useLessonStore();
-            const normalized = normalizeSequence(store.sequence);
             return (
-                <Panel className="space-y-4">
-                    <div className="flex items-center justify-between gap-3 border-b border-ant-border pb-3 mb-2">
-                        <h3 className="text-sm font-semibold text-ant-text flex items-center gap-2"><Lucide.FileText size={16} className="text-ant-textMuted" /> Data Source</h3>
-                        {!compact && <Button variant="ghost" onClick={store.randomizeSeed} icon={<Lucide.Shuffle size={14} />} className="py-1 px-2 text-[11px]">Randomize</Button>}
-                    </div>
-                    {!compact && (
-                        <div className="grid sm:grid-cols-[1fr_auto] gap-3 items-end">
-                            <div>
-                                <label className="text-[11px] font-medium text-ant-textMuted block mb-1">Generative Seed</label>
-                                <InputText value={store.seed} onChange={(e) => store.setSeed(e.target.value)} error={store.seedError} />
-                            </div>
-                            <Button variant="secondary" onClick={store.generateSequence} disabled={Boolean(store.seedError)}>Sample</Button>
-                        </div>
-                    )}
-                    {store.seedError && <p className="text-[11px] text-ant-danger px-1">{store.seedError}</p>}
-                    <div>
-                        <div className="flex justify-between items-center mb-1.5">
-                            <label className="text-[11px] font-medium text-ant-textMuted">Observation Sequence (A-D)</label>
-                            <span className="text-[11px] font-mono text-ant-textMuted">{normalized.length}/240</span>
-                        </div>
-                        <textarea 
-                            value={store.sequenceDraft} 
-                            onChange={(e) => store.setSequenceDraft(e.target.value)} 
-                            rows={compact ? 2 : 3} 
-                            className={cn(
-                                "w-full resize-none bg-ant-bg border border-ant-border rounded-md px-3 py-2 text-[13px] font-mono text-ant-text leading-relaxed transition-colors focus:outline-none focus:border-ant-accent focus:ring-1 focus:ring-ant-accent",
-                                store.sequenceError && "border-ant-danger focus:border-ant-danger focus:ring-ant-danger"
-                            )}
+                <div className="space-y-6">
+                    <Panel className="space-y-4">
+                        <AnthropicSlider
+                            label="Parameter Control"
+                            symbol="θ"
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={store.paramValue}
+                            onChange={(v) => store.update({ paramValue: v })}
                         />
-                        <div className="flex items-center justify-between gap-3 mt-2">
-                            <span className={cn('text-[11px]', store.sequenceError ? 'text-ant-danger' : 'text-ant-textMuted')}>
-                                {store.sequenceError || (store.sequenceDraft !== normalized && 'Unsaved modifications')}
-                            </span>
-                            {store.sequenceDraft !== store.sequence && (
-                                <Button variant="primary" onClick={store.commitSequence} className="py-1 px-3 text-[11px]">Update Model</Button>
-                            )}
-                        </div>
-                    </div>
-                </Panel>
-            );
-        };
-
-        const CodingDashboard = () => {
-            const store = useLessonStore();
-            const rows = useMemo(() => summarizeCompressors(store.sequence), [store.sequence, store.renderTick]);
-            const best = _.minBy(rows, 'bits');
-            const raw = rows[0]?.bits || 0;
-            return (
-                <div className="space-y-6">
-                    <SequenceWorkbench />
+                    </Panel>
                     <Panel>
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-sm font-semibold flex items-center gap-2 text-ant-text">Compression Cost</h3>
-                            <span className="text-[10px] uppercase tracking-wider font-semibold text-ant-textMuted">Lower is Better</span>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-semibold text-ant-text">Interactive Visualization</h3>
+                            <span className="text-[10px] uppercase tracking-wider font-semibold text-ant-textMuted">Unit Metric</span>
                         </div>
-                        <div className="h-[200px] -ml-6">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={rows} margin={{ top: 5, right: 10, left: -20, bottom: 25 }}>
-                                    <CartesianGrid stroke="var(--ant-border)" vertical={false} />
-                                    <XAxis dataKey="name" angle={-20} textAnchor="end" interval={0} tick={{ fill: 'var(--ant-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} dy={5} />
-                                    <YAxis tick={{ fill: 'var(--ant-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                                    <Tooltip cursor={{fill: 'var(--ant-surface-hover)'}} contentStyle={{ backgroundColor: 'var(--ant-surface)', border: '1px solid var(--ant-border)', borderRadius: 4, boxShadow: 'var(--ant-md)', fontSize: 12, color: 'var(--ant-text)' }} formatter={(value) => [`${value.toFixed(1)} bits`, 'Cost']} />
-                                    <Bar dataKey="bits" radius={[2, 2, 0, 0]}>
-                                        {rows.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.name === best.name ? 'var(--ant-accent)' : 'var(--ant-text-muted)'} opacity={entry.name === best.name ? 1 : 0.5} />
-                                        ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
+                        <div className="h-[220px] flex items-center justify-center border border-dashed border-ant-border rounded-md text-xs font-mono text-ant-textMuted">
+                            [ Visual / Chart / Simulation Mount ]
                         </div>
                         <div className="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-ant-border">
-                            <Stat label="Raw Baseline" value={`${raw.toFixed(1)} b`} />
-                            <Stat label="Best Encoding" value={`${best.bits.toFixed(1)} b`} tone="accent" />
-                            <Stat label="Compression" value={`${Math.max(0, best.savings * 100).toFixed(1)}%`} detail={best.name} />
+                            <Stat label="Metric A" value={store.paramValue.toFixed(2)} tone="accent" />
+                            <Stat label="Metric B" value="0.00" />
+                            <Stat label="Metric C" value="0.00" />
                         </div>
                     </Panel>
-                    <Panel>
-                        <h3 className="text-sm font-semibold mb-4 text-ant-text border-b border-ant-border pb-2">Assumed Regularities</h3>
-                        <div className="space-y-3">
-                            {rows.map(row => (
-                                <div key={row.name} className="flex items-start justify-between group">
-                                    <div>
-                                        <div className="text-[12px] font-semibold text-ant-text">{row.name}</div>
-                                        <div className="text-[11px] text-ant-textMuted mt-0.5">{row.model}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-[12px] font-mono text-ant-text">{row.bits.toFixed(1)} b</div>
-                                        <div className={cn("text-[10px] font-medium mt-0.5", row.savings > 0 ? 'text-ant-chartSecondary' : 'text-ant-textMuted')}>
-                                            {row.savings > 0 && '-'}{(row.savings * 100).toFixed(0)}%
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </Panel>
-                </div>
-            );
-        };
-
-        const EntropyDashboard = () => {
-            const store = useLessonStore();
-            const curve = useMemo(() => _.range(1, 100).map(i => ({ p: i / 100, entropy: entropyBinary(i / 100) })), []);
-            const sample = useMemo(() => generateBinarySample({ seed: store.seed, length: store.sampleLength, probabilityOne: store.entropyBias }), [store.seed, store.sampleLength, store.entropyBias]);
-            const empiricalP = sample.split('').filter(x => x === '1').length / sample.length;
-            return (
-                <div className="space-y-6">
-                    <Panel className="space-y-6">
-                        <AnthropicSlider label="Bias: P(1)" symbol="p" min={0.01} max={0.99} step={0.01} value={store.entropyBias} onChange={(value) => store.update({ entropyBias: value })} formatter={(v) => v.toFixed(2)} />
-                        <AnthropicSlider label="Sample size" symbol="n" min={24} max={200} step={1} value={store.sampleLength} onChange={(value) => store.update({ sampleLength: value })} />
-                    </Panel>
-                    <Panel>
-                        <div className="grid grid-cols-3 gap-3 mb-6">
-                            <Stat label="Max Entropy" value="1.000 b" detail="Uniform distribution" />
-                            <Stat label="Source Entropy" value={`${entropyBinary(store.entropyBias).toFixed(3)} b`} tone="accent" detail={`Given p=${store.entropyBias.toFixed(2)}`} />
-                            <Stat label="Empirical p(1)" value={empiricalP.toFixed(3)} detail="Observed in sample" />
-                        </div>
-                        <div className="h-[200px] -ml-6">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={curve} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                                    <CartesianGrid stroke="var(--ant-border)" vertical={false} />
-                                    <XAxis dataKey="p" tick={{ fill: 'var(--ant-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} dy={5} />
-                                    <YAxis domain={[0, 1]} tick={{ fill: 'var(--ant-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ backgroundColor: 'var(--ant-surface)', border: '1px solid var(--ant-border)', borderRadius: 4, boxShadow: 'var(--ant-md)', fontSize: 12, color: 'var(--ant-text)' }} formatter={(v)=>[v.toFixed(3), 'Entropy']} />
-                                    <ReferenceLine x={store.entropyBias} stroke="var(--ant-text)" strokeDasharray="3 3" />
-                                    <Area type="monotone" dataKey="entropy" stroke="var(--ant-chartSecondary)" fill="var(--ant-chartSecondary)" fillOpacity={0.1} strokeWidth={2} isAnimationActive={false} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </Panel>
-                    <Panel>
-                        <div className="flex justify-between items-center mb-4 border-b border-ant-border pb-2">
-                            <h3 className="text-sm font-semibold text-ant-text">Generated Draw</h3>
-                            <span className="text-[10px] uppercase font-semibold text-ant-textMuted">{sample.length} tokens</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                            {sample.split('').map((token, index) => (
-                                <span className={cn('token-cell', token === '1' ? 'highlight' : '')} key={index}>{token}</span>
-                            ))}
-                        </div>
-                    </Panel>
-                </div>
-            );
-        };
-
-        const MDLDashboard = () => {
-            const store = useLessonStore();
-            const result = useMemo(() => buildMDLRows(store.sequence), [store.sequence, store.renderTick]);
-            const bestMdl = _.minBy(result.rows, 'mdlBits');
-            const bestTest = _.minBy(result.rows, 'testBitsPerSymbol');
-            return (
-                <div className="space-y-6">
-                    <SequenceWorkbench compact />
-                    <Panel>
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-sm font-semibold text-ant-text">Complexity Penalty</h3>
-                            <span className="text-[10px] uppercase tracking-wider font-semibold text-ant-textMuted">70% Train / 30% Test</span>
-                        </div>
-                        <div className="h-[220px] -ml-6">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={result.rows} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                                    <CartesianGrid stroke="var(--ant-border)" vertical={false} />
-                                    <XAxis dataKey="order" tick={{ fill: 'var(--ant-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} dy={5} />
-                                    <YAxis tick={{ fill: 'var(--ant-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ backgroundColor: 'var(--ant-surface)', border: '1px solid var(--ant-border)', borderRadius: 4, boxShadow: 'var(--ant-md)', fontSize: 11 }} />
-                                    <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10 }} iconType="circle" />
-                                    <Line type="monotone" dataKey="trainDataBits" name="Data Cost" stroke="var(--ant-chartSecondary)" strokeWidth={2} dot={{r: 3}} activeDot={{r: 5}} />
-                                    <Line type="monotone" dataKey="modelBits" name="Model Cost" stroke="var(--ant-chartTertiary)" strokeWidth={2} dot={{r: 3}} />
-                                    <Line type="monotone" dataKey="mdlBits" name="MDL Objective" stroke="var(--ant-accent)" strokeWidth={2} dot={{r: 3}} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-ant-border">
-                            <Stat label="Optimal MDL (k)" value={`${bestMdl.order}`} tone="accent" />
-                            <Stat label="Optimal Test (k)" value={`${bestTest.order}`} />
-                            <Stat label="Min Test Loss" value={`${bestTest.testBitsPerSymbol.toFixed(2)}`} detail="Bits per symbol" />
-                        </div>
-                    </Panel>
-                    <Panel className="p-0 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-[12px]">
-                                <thead className="bg-ant-bg border-b border-ant-border text-ant-textMuted font-medium text-left">
-                                    <tr>
-                                        <th className="py-3 px-4 font-normal">Order</th>
-                                        <th className="py-3 px-4 font-normal text-right">Contexts</th>
-                                        <th className="py-3 px-4 font-normal text-right">Data (b)</th>
-                                        <th className="py-3 px-4 font-normal text-right">Model (b)</th>
-                                        <th className="py-3 px-4 font-normal text-right text-ant-text">MDL</th>
-                                        <th className="py-3 px-4 font-normal text-right">Test Loss</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="font-mono">
-                                    {result.rows.map((row, i) => (
-                                        <tr key={row.order} className={cn("border-b border-ant-border/50 last:border-0 hover:bg-ant-surfaceHover")}>
-                                            <td className="py-2.5 px-4 font-sans font-medium">{row.order}</td>
-                                            <td className="py-2.5 px-4 text-right text-ant-textMuted">{row.contexts}</td>
-                                            <td className="py-2.5 px-4 text-right">{row.trainDataBits.toFixed(1)}</td>
-                                            <td className="py-2.5 px-4 text-right text-ant-chartTertiary">{row.modelBits.toFixed(1)}</td>
-                                            <td className={cn('py-2.5 px-4 text-right font-medium', row.order === bestMdl.order ? 'text-ant-accent' : 'text-ant-text')}>{row.mdlBits.toFixed(1)}</td>
-                                            <td className="py-2.5 px-4 text-right text-ant-textMuted">{row.testBitsPerSymbol.toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Panel>
-                </div>
-            );
-        };
-
-        const PredictionDashboard = () => {
-            const store = useLessonStore();
-            const sequence = normalizeSequence(store.sequence);
-            const alphabet = alphabetOf(sequence);
-            const distribution = useMemo(() => nextSymbolDistribution(sequence, store.markovOrder, alphabet), [sequence, store.markovOrder]);
-            const winner = _.maxBy(distribution, 'probability');
-            return (
-                <div className="space-y-6">
-                    <SequenceWorkbench compact />
-                    <Panel className="space-y-5">
-                        <AnthropicSlider label="Markov Context (k)" symbol="k" min={0} max={5} step={1} value={store.markovOrder} onChange={(value) => store.update({ markovOrder: value })} />
-                        <div className="pt-3 border-t border-ant-border">
-                            <div className="text-[11px] text-ant-textMuted mb-2">Conditioning context</div>
-                            <div className="font-mono text-base text-ant-text break-all">
-                                <span className="text-ant-textMuted opacity-60">…{sequence.slice(0, -Math.max(1, store.markovOrder)).slice(-12)}</span>
-                                <span className="font-semibold bg-ant-bg border border-ant-border px-1 py-0.5 rounded ml-1">{sequence.slice(-Math.max(1, store.markovOrder))}</span>
-                                <span className="text-ant-accent animate-pulse ml-1">_</span>
-                            </div>
-                        </div>
-                    </Panel>
-                    <Panel>
-                        <h3 className="text-sm font-semibold mb-4 text-ant-text border-b border-ant-border pb-2">Incremental Code Length</h3>
-                        <div className="space-y-2">
-                            {distribution.map(item => (
-                                <div key={item.symbol} className="flex items-center gap-4 p-2.5 rounded hover:bg-ant-surfaceHover transition-colors">
-                                    <div className="w-8 h-8 shrink-0 rounded border border-ant-border bg-ant-bg flex items-center justify-center font-mono font-medium text-ant-text">
-                                        {item.symbol}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-end mb-1.5">
-                                            <span className="text-[11px] text-ant-textMuted">n = {item.count}</span>
-                                            <span className="text-[12px] font-mono font-medium text-ant-text">{(item.probability * 100).toFixed(1)}%</span>
-                                        </div>
-                                        <div className="h-1 bg-ant-border rounded-full overflow-hidden">
-                                            <div className="h-full bg-ant-accent transition-all duration-300" style={{ width: `${item.probability * 100}%` }} />
-                                        </div>
-                                    </div>
-                                    <div className="w-16 text-right">
-                                        <div className="text-[12px] font-mono text-ant-text">{item.bits.toFixed(2)}</div>
-                                        <div className="text-[10px] text-ant-textMuted">bits</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-5 pt-4 border-t border-ant-border flex items-center justify-between">
-                            <div className="text-[12px] text-ant-textMuted leading-relaxed max-w-[70%]">
-                                The model predicts the continuation that minimizes the expected description length of the joint sequence.
-                            </div>
-                            <div className="w-10 h-10 shrink-0 bg-ant-accent text-white rounded flex items-center justify-center text-lg font-mono font-medium shadow-ant-sm">
-                                {winner?.symbol || '?'}
-                            </div>
-                        </div>
-                    </Panel>
-                </div>
-            );
-        };
-
-        const LimitsDashboard = () => {
-            const store = useLessonStore();
-            const signal = useMemo(() => generateSignal({ seed: store.seed, samples: 128, noise: store.signalNoise }), [store.seed, store.signalNoise]);
-            const quantized = useMemo(() => quantizeSignal(signal, store.quantLevels), [signal, store.quantLevels]);
-            const curve = useMemo(() => computeRateDistortionCurve(signal, store.distortionWeight), [signal, store.distortionWeight]);
-            const best = _.minBy(curve, 'objective');
-            return (
-                <div className="space-y-6">
-                    <Panel className="space-y-5">
-                        <AnthropicSlider label="Quantization Levels" symbol="K" min={2} max={32} step={1} value={store.quantLevels} onChange={(value) => store.update({ quantLevels: value })} />
-                        <AnthropicSlider label="Distortion Penalty" symbol="λ" min={0} max={100} step={1} value={store.distortionWeight} onChange={(value) => store.update({ distortionWeight: value })} />
-                        <AnthropicSlider label="Irreducible Noise" symbol="σ" min={0} max={0.5} step={0.01} value={store.signalNoise} onChange={(value) => store.update({ signalNoise: value })} formatter={(v) => v.toFixed(2)} />
-                    </Panel>
-                    <Panel>
-                        <div className="grid grid-cols-3 gap-3 mb-6">
-                            <Stat label="Representation Rate" value={`${quantized.rate.toFixed(2)} b`} tone="accent" detail="Bits per sample" />
-                            <Stat label="Distortion (MSE)" value={quantized.mse.toFixed(4)} detail="Loss of information" />
-                            <Stat label="Optimum Capacity" value={`K = ${best.levels}`} detail="Minimizes R + λD" />
-                        </div>
-                        <div className="h-[200px] -ml-6">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={quantized.data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                                    <CartesianGrid stroke="var(--ant-border)" vertical={false} />
-                                    <XAxis dataKey="index" tick={{ fill: 'var(--ant-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} dy={5} />
-                                    <YAxis domain={[-1.1, 1.1]} tick={{ fill: 'var(--ant-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                                    <Tooltip contentStyle={{ backgroundColor: 'var(--ant-surface)', border: '1px solid var(--ant-border)', borderRadius: 4, boxShadow: 'var(--ant-md)', fontSize: 11 }} />
-                                    <Line type="monotone" dataKey="original" name="Source Signal" stroke="var(--ant-text-muted)" dot={false} strokeWidth={1} opacity={0.6} />
-                                    <Line type="stepAfter" dataKey="reconstructed" name="Compressed" stroke="var(--ant-accent)" dot={false} strokeWidth={2} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </Panel>
-                    <div className="px-5 py-4 bg-ant-surface border-l-2 border-ant-chartTertiary text-[13px] text-ant-text leading-relaxed">
-                        <strong>Lossy compression discards detail based on the objective function.</strong> An internal representation can be highly compact while completely ignoring causal variables or constraints that fall outside the penalty parameter λ.
-                    </div>
                 </div>
             );
         };
@@ -1189,15 +403,13 @@
 
             return (
                 <div className="flex h-full w-full bg-ant-bg">
-                    {/* Main Reading Area */}
                     <div className="flex-1 overflow-y-auto scroll-smooth relative no-scrollbar">
                         <div className="px-6 py-16 md:px-16 lg:px-24 max-w-[850px] mx-auto transition-all" style={{ fontSize: `${store.fontSizeMultiplier}rem` }}>
-                            
                             <header className="mb-20 pb-12 border-b border-ant-border">
                                 <div className="text-[12px] font-sans font-medium text-ant-textMuted uppercase tracking-widest mb-6">Essay</div>
-                                <h1 className="text-[2.5em] md:text-[3.2em] font-serif text-ant-text mb-6 leading-tight">Compression is <br/>Intelligence.</h1>
+                                <h1 className="text-[2.5em] md:text-[3.2em] font-serif text-ant-text mb-6 leading-tight">Lesson Title Placeholder</h1>
                                 <p className="text-[1.2em] font-serif leading-relaxed text-ant-textMuted max-w-[90%]">
-                                    Why compact models predict, where description length becomes learning, and why compression is central without being the whole of intelligence.
+                                    Subtitle placeholder summarizing the core problem, mechanism, and takeaways.
                                 </p>
                             </header>
 
@@ -1249,21 +461,16 @@
         const MainApp = () => {
             const store = useLessonStore();
             const tabs = [
-                { id: VIS_TABS.CODING, label: 'Information coding' },
-                { id: VIS_TABS.ENTROPY, label: 'Entropy bounds' },
-                { id: VIS_TABS.MDL, label: 'Description length' },
-                { id: VIS_TABS.PREDICTION, label: 'Predictive distribution' },
-                { id: VIS_TABS.LIMITS, label: 'Rate-distortion' }
+                { id: VIS_TABS.TAB_1, label: 'Primary View' },
+                { id: VIS_TABS.TAB_2, label: 'Secondary View' }
             ];
 
             return (
                 <ErrorBoundary>
                     <div className="flex h-screen w-screen bg-ant-bg text-ant-text overflow-hidden selection:bg-ant-accent/20 selection:text-ant-text">
                         
-                        {/* Left Pane: Article (Academic Serif Layout) */}
+                        {/* Left Pane: Article */}
                         <div className={cn('h-full lg:w-[55%] xl:w-[60%] border-r border-ant-border relative z-10 transition-transform duration-0', store.mobileView === 'article' ? 'block w-full' : 'hidden lg:block')}>
-                            
-                            {/* Top left controls */}
                             <div className="absolute top-4 left-6 z-30 flex items-center gap-4">
                                 <button onClick={store.toggleTheme} className="text-ant-textMuted hover:text-ant-text transition-colors" title="Toggle Theme">
                                     {store.theme === 'dark' ? <Lucide.Sun size={18} /> : <Lucide.Moon size={18} />}
@@ -1273,24 +480,18 @@
                                     <button onClick={store.increaseFontSize} className="hover:text-ant-text text-[16px] font-serif">A</button>
                                 </div>
                             </div>
-                            
                             <ArticleReader />
                         </div>
                         
-                        {/* Right Pane: Visuals (Clean Sans-Serif Dashboard) */}
+                        {/* Right Pane: Visuals */}
                         <div className={cn('h-full lg:w-[45%] xl:w-[40%] bg-ant-bg relative z-0 overflow-y-auto no-scrollbar transition-transform duration-0 font-sans', store.mobileView === 'visuals' ? 'block w-full' : 'hidden lg:block')}>
-                            
                             <div className="sticky top-0 z-30 pt-6 pb-4 px-6 bg-ant-bg/95 backdrop-blur-sm border-b border-ant-border">
                                 <TabPill options={tabs} value={store.activeTab} onChange={(id) => store.update({ activeTab: id })} />
                             </div>
                             
                             <div className="p-6 pb-32 max-w-[600px]">
                                 <div className="transition-all duration-300">
-                                    {store.activeTab === VIS_TABS.CODING && <CodingDashboard />}
-                                    {store.activeTab === VIS_TABS.ENTROPY && <EntropyDashboard />}
-                                    {store.activeTab === VIS_TABS.MDL && <MDLDashboard />}
-                                    {store.activeTab === VIS_TABS.PREDICTION && <PredictionDashboard />}
-                                    {store.activeTab === VIS_TABS.LIMITS && <LimitsDashboard />}
+                                    <PlaceholderDashboard />
                                 </div>
                                 <RelatedReading sectionIds={TAB_TO_SECTIONS[store.activeTab] || []} />
                             </div>

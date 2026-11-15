@@ -1,36 +1,33 @@
-import { DEFAULT_LESSON_TEMPLATE, getInitialLessonPrompt } from "./prompts/initialLessonPrompt";
-import { getFollowUpLessonPrompt } from "./prompts/followUpLessonPrompt";
-import { GoogleGenAI } from "@google/genai";
+import {
+    DEFAULT_LESSON_TEMPLATE,
+    getFollowUpLessonPrompt,
+    getInitialLessonPrompt
+} from "./prompts";
 
-const getClient = () => {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        throw new Error("API Key not found");
+const requestLessonGeneration = async (prompt: string): Promise<string> => {
+    const response = await fetch("/api/gemini/generate", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data.error || `Request failed with status ${response.status}`);
     }
-    return new GoogleGenAI({ apiKey });
+
+    return typeof data.html === "string" ? data.html : "";
 };
-
-const MODEL_NAME = 'gemini-3.8-flash';
-
-// gemma-4-31b-it
-// gemma-4-26b-a4b-it
-
-const CLEAN_REGEX = /```html|```/g;
 
 export const generateInitialLesson = async (
     topic: string,
     templateFilename: string = DEFAULT_LESSON_TEMPLATE
 ): Promise<string> => {
-    const ai = getClient();
-
     try {
         const prompt = await getInitialLessonPrompt(topic, templateFilename);
-        const response = await ai.models.generateContent({
-            model: MODEL_NAME,
-            contents: prompt
-        });
-
-        return (response.text || "").replace(CLEAN_REGEX, '').trim();
+        return await requestLessonGeneration(prompt);
     } catch (error) {
         console.error("Gemini API Error:", error);
         throw error;
@@ -40,24 +37,19 @@ export const generateInitialLesson = async (
 export const generateFollowUpLesson = async (
     currentTopic: string,
     clickedElementHtml: string,
-    userQuestion: string,
-    templateFilename: string = DEFAULT_LESSON_TEMPLATE
+    userQuestion: string = "",
+    templateFilename: string = DEFAULT_LESSON_TEMPLATE,
+    previousFullHtml: string = ""
 ): Promise<string> => {
-    const ai = getClient();
-
     try {
         const prompt = await getFollowUpLessonPrompt(
             currentTopic,
             clickedElementHtml,
             userQuestion,
-            templateFilename
+            templateFilename,
+            previousFullHtml
         );
-        const response = await ai.models.generateContent({
-            model: MODEL_NAME,
-            contents: prompt,
-        });
-
-        return (response.text || "").replace(CLEAN_REGEX, '').trim();
+        return await requestLessonGeneration(prompt);
     } catch (error) {
         console.error("Gemini API Error:", error);
         throw error;

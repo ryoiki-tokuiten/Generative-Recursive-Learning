@@ -9,7 +9,7 @@ import { GraphView } from './components/GraphView';
 import { DatabaseView } from './components/DatabaseView';
 import { LessonTemplateGallery } from './components/LessonTemplateGallery';
 import { getRun, syncRun } from './services/dbService';
-import { DEFAULT_LESSON_TEMPLATE } from './services/prompts/initialLessonPrompt';
+import { DEFAULT_LESSON_TEMPLATE } from './services/prompts';
 import { ArrowRight, Database } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -58,13 +58,18 @@ const App: React.FC = () => {
       const initialMap = { [newId]: newNode };
       const runId = uuidv4();
 
-      // Save initial run and node to Database
-      await syncRun(runId, topic, newId, newId, initialMap);
-
       setNodeMap(initialMap);
       setCurrentNodeId(newId);
       setActiveRunId(runId);
+
+      // Save initial run and node to Database without blocking lesson display
+      try {
+        await syncRun(runId, topic, newId, newId, initialMap);
+      } catch (syncErr) {
+        console.error("Failed to sync initial run to DB:", syncErr);
+      }
     } catch (err) {
+      console.error("Lesson generation failed:", err);
       alert("Failed to generate lesson. Please try again.");
     } finally {
       setIsLoading(false);
@@ -85,17 +90,20 @@ const App: React.FC = () => {
     setMode('browse'); // Reset mode while loading
 
     try {
+      const originalUserRequest = initialTopic.trim() || currentNode.topic;
       const newHtml = await generateFollowUpLesson(
-        currentNode.topic,
+        originalUserRequest,
         selection.htmlSnippet,
         prompt,
-        templateFilename
+        templateFilename,
+        currentNode.htmlContent
       );
       const newId = createGenerationId(nodeMap);
+      const resolvedTopic = prompt.trim() || `Deep Dive: ${selection.textSummary || selection.componentId}`;
       const newNode: PageNode = {
         id: newId,
         parentId: currentNode.id,
-        topic: prompt,
+        topic: resolvedTopic,
         htmlContent: newHtml,
         triggerContext: selection.htmlSnippet,
         triggerSummary: selection.textSummary,
@@ -114,15 +122,20 @@ const App: React.FC = () => {
         [newId]: newNode
       };
 
-      // Sync follow-up to DB if we have an active run
-      if (activeRunId) {
-        const rootId = Object.keys(updatedNodeMap).find(id => !updatedNodeMap[id].parentId) || null;
-        await syncRun(activeRunId, initialTopic, rootId, newId, updatedNodeMap);
-      }
-
       setNodeMap(updatedNodeMap);
       setCurrentNodeId(newId);
+
+      // Sync follow-up to DB if we have an active run
+      if (activeRunId) {
+        try {
+          const rootId = Object.keys(updatedNodeMap).find(id => !updatedNodeMap[id].parentId) || null;
+          await syncRun(activeRunId, initialTopic, rootId, newId, updatedNodeMap);
+        } catch (syncErr) {
+          console.error("Failed to sync follow-up run to DB:", syncErr);
+        }
+      }
     } catch (err) {
+      console.error("Follow-up generation failed:", err);
       alert("Failed to generate follow-up. Please try again.");
     } finally {
       setIsLoading(false);
