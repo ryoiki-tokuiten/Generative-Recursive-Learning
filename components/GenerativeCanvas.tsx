@@ -5,9 +5,151 @@ interface GenerativeCanvasProps {
   htmlContent: string;
   mode: AppMode;
   onElementSelect: (data: SelectionEvent) => void;
+  onVerificationResult?: (errors: string[]) => void;
 }
 
-const INJECTED_SCRIPT = `
+const ERROR_INTERCEPTOR_SCRIPT = `
+<script>
+  (function() {
+    const capturedErrors = [];
+    const seen = new Set();
+    let reportTimer = null;
+    let hasReported = false;
+
+    const shouldIgnoreMessage = (msg) => {
+      if (!msg) return true;
+      const text = String(msg).trim();
+      if (!text) return true;
+      // Ignore non-error warnings and informational notices sometimes routed through console.error
+      if (
+        text.startsWith('Warning:') ||
+        text.includes('You are using the in-browser Babel transformer') ||
+        text.includes('cdn.tailwindcss.com should not be used in production') ||
+        text.includes('Download the React DevTools') ||
+        text.includes('ResizeObserver loop')
+      ) {
+        return true;
+      }
+      return false;
+    };
+
+    const formatArg = (arg) => {
+      if (arg instanceof Error) {
+        return arg.stack || (arg.name + ': ' + arg.message);
+      }
+      if (typeof arg === 'object' && arg !== null) {
+        if (typeof arg.message === 'string') {
+          return arg.stack || arg.message;
+        }
+        try {
+          return JSON.stringify(arg);
+        } catch {
+          return String(arg);
+        }
+      }
+      return String(arg);
+    };
+
+    const sendReport = () => {
+      if (hasReported) return;
+      hasReported = true;
+      if (reportTimer) clearTimeout(reportTimer);
+      window.parent.postMessage({
+        type: 'CANVAS_VERIFICATION_RESULT',
+        payload: {
+          errors: capturedErrors
+        }
+      }, '*');
+    };
+
+    const scheduleReport = (delayMs) => {
+      if (hasReported) return;
+      if (reportTimer) clearTimeout(reportTimer);
+      reportTimer = setTimeout(sendReport, delayMs);
+    };
+
+    const recordError = (rawText) => {
+      if (shouldIgnoreMessage(rawText)) return;
+      const normalized = String(rawText).trim().slice(0, 2500);
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        capturedErrors.push(normalized);
+        scheduleReport(250);
+      }
+    };
+
+    // 1. Intercept direct console.error calls (warnings and logs are ignored)
+    const originalConsoleError = console.error;
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      const formatted = args.map(formatArg).join(' ');
+      recordError(formatted);
+    };
+
+    // 2. Intercept uncaught runtime, syntax, and Babel transpilation errors
+    window.addEventListener('error', (event) => {
+      if (event.error) {
+        recordError(event.error.stack || (event.error.name + ': ' + event.error.message));
+      } else if (event.message) {
+        const location = event.filename
+          ? ' (' + event.filename + ':' + (event.lineno || 0) + ':' + (event.colno || 0) + ')'
+          : '';
+        recordError(event.message + location);
+      } else if (event.target && event.target.tagName === 'SCRIPT') {
+        const src = event.target.src || 'inline module script';
+        recordError('Script load/execution error: Failed to load ' + src);
+      }
+    }, true);
+
+    // 3. Intercept unhandled Promise rejections (e.g. failed ESM imports or async crashes)
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event.reason;
+      if (reason instanceof Error) {
+        recordError('Unhandled Promise Rejection: ' + (reason.stack || reason.message));
+      } else {
+        recordError('Unhandled Promise Rejection: ' + formatArg(reason));
+      }
+    });
+
+    // Wait for page load and Babel/ESM module execution before reporting clean verification
+    window.addEventListener('load', () => {
+      const hasModuleScripts = !!document.querySelector(
+        'script[type="text/babel"][data-type="module"], script[type="module"]'
+      );
+
+      if (!hasModuleScripts) {
+        scheduleReport(400);
+        return;
+      }
+
+      let checks = 0;
+      const maxChecks = 35; // Up to ~5.25s for ESM imports over network
+      const pollMount = () => {
+        if (hasReported) return;
+        if (capturedErrors.length > 0) {
+          scheduleReport(250);
+          return;
+        }
+        const rootEl = document.getElementById('root');
+        if (!rootEl || (rootEl.children && rootEl.children.length > 0)) {
+          scheduleReport(450);
+          return;
+        }
+        checks += 1;
+        if (checks >= maxChecks) {
+          sendReport();
+          return;
+        }
+        setTimeout(pollMount, 150);
+      };
+
+      setTimeout(pollMount, 150);
+    });
+  })();
+</script>
+`;
+
+const INTERACTION_SCRIPT = `
 <style>
   .interactive-hover {
     outline: 4px solid #6366f1 !important; /* Indigo 500 */
@@ -133,17 +275,28 @@ const INJECTED_SCRIPT = `
 export const GenerativeCanvas: React.FC<GenerativeCanvasProps> = ({ 
   htmlContent, 
   mode, 
-  onElementSelect 
+  onElementSelect,
+  onVerificationResult
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Construct the full source document with injected scripts
+  // Construct the full source document with error interceptor in <head> and interaction script before </body>
   const srcDoc = useMemo(() => {
-    // Attempt to insert before closing body, otherwise append
-    if (htmlContent.includes('</body>')) {
-        return htmlContent.replace('</body>', `${INJECTED_SCRIPT}</body>`);
+    let doc = htmlContent;
+
+    if (/<head[^>]*>/i.test(doc)) {
+      doc = doc.replace(/<head[^>]*>/i, (match) => `${match}${ERROR_INTERCEPTOR_SCRIPT}`);
+    } else {
+      doc = `${ERROR_INTERCEPTOR_SCRIPT}${doc}`;
     }
-    return htmlContent + INJECTED_SCRIPT;
+
+    if (doc.includes('</body>')) {
+      doc = doc.replace('</body>', `${INTERACTION_SCRIPT}</body>`);
+    } else {
+      doc = `${doc}${INTERACTION_SCRIPT}`;
+    }
+
+    return doc;
   }, [htmlContent]);
 
   // Handle Mode Updates via PostMessage
@@ -154,17 +307,24 @@ export const GenerativeCanvas: React.FC<GenerativeCanvasProps> = ({
     }
   }, [mode]);
 
-  // Handle Selection Messages from Iframe
+  // Handle Selection and Verification Messages from Iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'ELEMENT_SELECTED') {
+      if (!event.data) return;
+
+      if (event.data.type === 'ELEMENT_SELECTED') {
         onElementSelect(event.data.payload);
+      } else if (event.data.type === 'CANVAS_VERIFICATION_RESULT') {
+        const errors = Array.isArray(event.data.payload?.errors)
+          ? event.data.payload.errors
+          : [];
+        onVerificationResult?.(errors);
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [onElementSelect]);
+  }, [onElementSelect, onVerificationResult]);
 
   // Initial load handler to sync mode
   const handleLoad = () => {

@@ -3,7 +3,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer, loadEnv } from 'vite';
 import { initDb, getAllRuns, getRun, syncRun, deleteRun } from './services/dbServer.ts';
-import { generateLessonFromPrompt, streamLessonFromPrompt } from './services/geminiServer.ts';
+import {
+  startLessonSession,
+  repairLessonSession,
+  closeLessonSession,
+  streamLessonFromPrompt,
+} from './services/geminiServer.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,7 +80,7 @@ async function startServer() {
 
   // --- Gemini API Routes ---
 
-  // POST /api/gemini/generate - Generate lesson HTML from prompt
+  // POST /api/gemini/generate - Start a stateful chat session and generate initial HTML from prompt
   app.post('/api/gemini/generate', async (req, res) => {
     try {
       const { prompt, model } = req.body || {};
@@ -84,12 +89,39 @@ async function startServer() {
         return;
       }
 
-      const html = await generateLessonFromPrompt(prompt, model);
-      res.status(200).json({ html });
+      const { sessionId, html } = await startLessonSession(prompt, model);
+      res.status(200).json({ sessionId, html });
     } catch (err: any) {
       console.error('Gemini API Error:', err);
       res.status(500).json({ error: err?.message || 'Failed to generate lesson content' });
     }
+  });
+
+  // POST /api/gemini/repair - Send canvas console errors in the same chat session and apply JSON diff
+  app.post('/api/gemini/repair', async (req, res) => {
+    try {
+      const { sessionId, errors } = req.body || {};
+      if (!sessionId || typeof sessionId !== 'string') {
+        res.status(400).json({ error: 'Missing required sessionId' });
+        return;
+      }
+      if (!Array.isArray(errors) || errors.length === 0) {
+        res.status(400).json({ error: 'Missing non-empty errors array' });
+        return;
+      }
+
+      const result = await repairLessonSession(sessionId, errors);
+      res.status(200).json(result);
+    } catch (err: any) {
+      console.error('Gemini Repair Error:', err);
+      res.status(500).json({ error: err?.message || 'Failed to repair lesson HTML' });
+    }
+  });
+
+  // DELETE /api/gemini/session/:sessionId - Clean up chat session after verification finishes
+  app.delete('/api/gemini/session/:sessionId', (req, res) => {
+    closeLessonSession(req.params.sessionId);
+    res.status(200).json({ success: true });
   });
 
   // POST /api/gemini/stream - Stream lesson generation via SSE

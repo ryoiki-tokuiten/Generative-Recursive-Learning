@@ -1,6 +1,12 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { PageNode, NodeMap, AppMode, SelectionEvent } from './types';
-import { generateInitialLesson, generateFollowUpLesson } from './services/geminiService';
+import {
+  startInitialLessonSession,
+  startFollowUpLessonSession,
+  repairLessonWithDiff,
+  closeLessonSession,
+  LessonGenerationSession
+} from './services/geminiService';
 import { GenerativeCanvas } from './components/GenerativeCanvas';
 import { FloatingControls } from './components/FloatingControls';
 import { InteractionModal } from './components/InteractionModal';
@@ -18,6 +24,9 @@ import {
   isBranchForSelection
 } from './utils/sessionGraph';
 
+const MAX_REPAIR_ATTEMPTS = 3;
+const CANVAS_VERIFY_TIMEOUT_MS = 10000;
+
 const App: React.FC = () => {
   // --- State ---
   const [nodeMap, setNodeMap] = useState<NodeMap>({});
@@ -28,12 +37,77 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [initialTopic, setInitialTopic] = useState('');
   const [selectedTemplateFilename, setSelectedTemplateFilename] = useState(DEFAULT_LESSON_TEMPLATE);
+  const [candidateHtml, setCandidateHtml] = useState<string | null>(null);
 
   // Interaction State
   const [pendingSelection, setPendingSelection] = useState<SelectionEvent | null>(null);
 
+  // Canvas verification synchronization
+  const verificationResolverRef = useRef<((errors: string[]) => void) | null>(null);
+  const verificationTimeoutRef = useRef<number | null>(null);
+
   // Computed
   const currentNode = currentNodeId ? nodeMap[currentNodeId] : null;
+
+  const handleCanvasVerificationResult = useCallback((errors: string[]) => {
+    if (verificationTimeoutRef.current !== null) {
+      window.clearTimeout(verificationTimeoutRef.current);
+      verificationTimeoutRef.current = null;
+    }
+    if (verificationResolverRef.current) {
+      const resolve = verificationResolverRef.current;
+      verificationResolverRef.current = null;
+      resolve(errors);
+    }
+  }, []);
+
+  const verifyHtmlInCanvas = useCallback((html: string): Promise<string[]> => {
+    return new Promise((resolve) => {
+      if (verificationTimeoutRef.current !== null) {
+        window.clearTimeout(verificationTimeoutRef.current);
+      }
+
+      verificationResolverRef.current = resolve;
+      setCandidateHtml(html);
+
+      verificationTimeoutRef.current = window.setTimeout(() => {
+        if (verificationResolverRef.current) {
+          const pendingResolve = verificationResolverRef.current;
+          verificationResolverRef.current = null;
+          pendingResolve([]);
+        }
+      }, CANVAS_VERIFY_TIMEOUT_MS);
+    });
+  }, []);
+
+  const runVerifiedGeneration = useCallback(
+    async (createSession: () => Promise<LessonGenerationSession>): Promise<string> => {
+      const { sessionId, html: initialHtml } = await createSession();
+      let currentHtml = initialHtml;
+
+      try {
+        let errors = await verifyHtmlInCanvas(currentHtml);
+
+        let attempt = 0;
+        while (errors.length > 0 && attempt < MAX_REPAIR_ATTEMPTS) {
+          attempt += 1;
+          currentHtml = await repairLessonWithDiff(sessionId, errors);
+          errors = await verifyHtmlInCanvas(currentHtml);
+        }
+
+        if (errors.length > 0) {
+          throw new Error(
+            `Verification failed after ${MAX_REPAIR_ATTEMPTS} repair attempts:\n${errors[0]}`
+          );
+        }
+
+        return currentHtml;
+      } finally {
+        await closeLessonSession(sessionId);
+      }
+    },
+    [verifyHtmlInCanvas]
+  );
 
   // --- Handlers ---
 
@@ -44,13 +118,15 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       const topic = initialTopic.trim();
-      const html = await generateInitialLesson(topic, selectedTemplateFilename);
+      const verifiedHtml = await runVerifiedGeneration(() =>
+        startInitialLessonSession(topic, selectedTemplateFilename)
+      );
       const newId = createGenerationId({});
       const newNode: PageNode = {
         id: newId,
         parentId: null,
         topic,
-        htmlContent: html,
+        htmlContent: verifiedHtml,
         childrenIds: [],
         timestamp: Date.now()
       };
@@ -61,6 +137,7 @@ const App: React.FC = () => {
       setNodeMap(initialMap);
       setCurrentNodeId(newId);
       setActiveRunId(runId);
+      setCandidateHtml(null);
 
       // Save initial run and node to Database without blocking lesson display
       try {
@@ -69,6 +146,7 @@ const App: React.FC = () => {
         console.error("Failed to sync initial run to DB:", syncErr);
       }
     } catch (err) {
+      setCandidateHtml(null);
       console.error("Lesson generation failed:", err);
       alert("Failed to generate lesson. Please try again.");
     } finally {
@@ -88,15 +166,18 @@ const App: React.FC = () => {
     const selection = pendingSelection;
     setPendingSelection(null);
     setMode('browse'); // Reset mode while loading
+    setWorkspaceView('lesson');
 
     try {
       const originalUserRequest = initialTopic.trim() || currentNode.topic;
-      const newHtml = await generateFollowUpLesson(
-        originalUserRequest,
-        selection.htmlSnippet,
-        prompt,
-        templateFilename,
-        currentNode.htmlContent
+      const verifiedHtml = await runVerifiedGeneration(() =>
+        startFollowUpLessonSession(
+          originalUserRequest,
+          selection.htmlSnippet,
+          prompt,
+          templateFilename,
+          currentNode.htmlContent
+        )
       );
       const newId = createGenerationId(nodeMap);
       const resolvedTopic = prompt.trim() || `Deep Dive: ${selection.textSummary || selection.componentId}`;
@@ -104,7 +185,7 @@ const App: React.FC = () => {
         id: newId,
         parentId: currentNode.id,
         topic: resolvedTopic,
-        htmlContent: newHtml,
+        htmlContent: verifiedHtml,
         triggerContext: selection.htmlSnippet,
         triggerSummary: selection.textSummary,
         parentComponentId: selection.componentId,
@@ -124,6 +205,7 @@ const App: React.FC = () => {
 
       setNodeMap(updatedNodeMap);
       setCurrentNodeId(newId);
+      setCandidateHtml(null);
 
       // Sync follow-up to DB if we have an active run
       if (activeRunId) {
@@ -135,6 +217,7 @@ const App: React.FC = () => {
         }
       }
     } catch (err) {
+      setCandidateHtml(null);
       console.error("Follow-up generation failed:", err);
       alert("Failed to generate follow-up. Please try again.");
     } finally {
@@ -206,6 +289,7 @@ const App: React.FC = () => {
     if (confirm("Are you sure you want to start over? Current session state in memory will be cleared.")) {
       setNodeMap({});
       setCurrentNodeId(null);
+      setCandidateHtml(null);
       setInitialTopic('');
       setActiveRunId(null);
       setMode('browse');
@@ -233,6 +317,7 @@ const App: React.FC = () => {
   const handleStartNewSession = () => {
     setNodeMap({});
     setCurrentNodeId(null);
+    setCandidateHtml(null);
     setInitialTopic('');
     setActiveRunId(null);
     setMode('browse');
@@ -278,8 +363,8 @@ const App: React.FC = () => {
     );
   }
 
-  // Guard: if no session OR if currentNode doesn't exist in map, show landing page
-  if (!currentNodeId || !currentNode) {
+  // Guard: if no session OR if currentNode doesn't exist in map (and no candidateHtml is being verified), show landing page
+  if ((!currentNodeId || !currentNode) && !candidateHtml) {
     return (
       <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0a0a0c] p-4 text-[#e2e8f0]">
         {isLoading && <GenerationOverlay title="Generating your first lesson" />}
@@ -332,11 +417,17 @@ const App: React.FC = () => {
     );
   }
 
+  const activeHtml = candidateHtml ?? currentNode?.htmlContent ?? '';
+
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-[#e2e8f0] font-sans">
-      {isLoading && <GenerationOverlay title="Generating recursive lesson" />}
+      {isLoading && (
+        <GenerationOverlay
+          title={currentNode ? 'Generating recursive lesson' : 'Generating your first lesson'}
+        />
+      )}
 
-      {workspaceView === 'graph' ? (
+      {workspaceView === 'graph' && currentNode && !candidateHtml ? (
         <GraphView
           nodeMap={nodeMap}
           currentNodeId={currentNode.id}
@@ -344,25 +435,28 @@ const App: React.FC = () => {
         />
       ) : (
         <GenerativeCanvas
-          htmlContent={currentNode.htmlContent}
+          htmlContent={activeHtml}
           mode={mode}
           onElementSelect={handleElementSelect}
+          onVerificationResult={handleCanvasVerificationResult}
         />
       )}
 
-      <FloatingControls
-        mode={mode}
-        setMode={handleLessonMode}
-        workspaceView={workspaceView}
-        onToggleGraph={handleToggleGraph}
-        canGoBack={!!currentNode.parentId}
-        onBack={handleBack}
-        title={currentNode.topic}
-        onReset={handleReset}
-        onOpenDatabase={handleOpenDatabase}
-      />
+      {currentNode && (
+        <FloatingControls
+          mode={mode}
+          setMode={handleLessonMode}
+          workspaceView={workspaceView}
+          onToggleGraph={handleToggleGraph}
+          canGoBack={!!currentNode.parentId}
+          onBack={handleBack}
+          title={currentNode.topic}
+          onReset={handleReset}
+          onOpenDatabase={handleOpenDatabase}
+        />
+      )}
 
-      {workspaceView === 'lesson' && pendingSelection && (
+      {workspaceView === 'lesson' && currentNode && pendingSelection && (
         <InteractionModal
           selection={pendingSelection}
           onClose={() => setPendingSelection(null)}
